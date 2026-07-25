@@ -1,0 +1,179 @@
+import Image from "next/image";
+import Link from "next/link";
+import type { Product } from "@/lib/site-data";
+import { CompareIcon, EyeIcon, HeartIcon, StarIcon } from "./icons";
+
+/** Matches the reference's 90x13 star strip inside a 24px tall row. */
+function EmptyStars({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`flex h-[24px] items-center gap-[6px] text-[#d9d9d9] ${className}`}
+      role="img"
+      aria-label="No rating yet"
+    >
+      {Array.from({ length: 5 }, (_, i) => (
+        <StarIcon key={i} className="size-[13px]" />
+      ))}
+    </div>
+  );
+}
+
+/** New Arrivals variant: centred copy over a soft grey square thumbnail. */
+export function ArrivalCard({ product }: { product: Product }) {
+  return (
+    <article>
+      <div className="relative aspect-square overflow-hidden rounded-[15px] bg-thumb">
+        {product.badge ? (
+          <span className="absolute left-[15px] top-[15px] z-10 rounded-[20px] bg-amber px-2 text-[12px] font-semibold uppercase leading-[26px] text-white">
+            {product.badge}
+          </span>
+        ) : null}
+        <Image
+          src={product.image}
+          alt={product.title}
+          width={400}
+          height={400}
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 264px"
+          className="size-full object-cover transition-transform duration-500 hover:scale-105"
+        />
+      </div>
+
+      <div className="px-[10px] py-[15px] text-center">
+        <EmptyStars className="justify-center" />
+        {/* The reference clips titles to two lines on phones and to one line on
+            laptops, but lets them wrap freely on tablets and wide desktops. */}
+        <h3 className="mb-[5px] mt-[3px] h-[44px] overflow-hidden font-poppins text-[14px] font-medium capitalize leading-[22px] text-[#131a2a] min-[577px]:h-auto min-[577px]:overflow-visible min-[577px]:text-[16px] min-[577px]:leading-6 min-[1025px]:max-h-[26px] min-[1025px]:overflow-hidden min-[1367px]:max-h-none min-[1367px]:overflow-visible">
+          <Link href="/shop" className="transition-colors hover:text-salmon">
+            {product.title}
+          </Link>
+        </h3>
+        <p className="flex flex-wrap items-baseline justify-center gap-x-[6px]">
+          <del className="text-[16px] font-normal leading-6 text-body">
+            {product.oldPrice}
+          </del>
+          <span className="text-[20px] font-medium leading-[26px] text-[#131a2a]">
+            {product.price}
+          </span>
+        </p>
+      </div>
+    </article>
+  );
+}
+
+/** Shop archive card: centred copy, salmon sale price, hover action strip. */
+export function ShopCard({
+  product,
+  href = "/shop",
+}: {
+  product: Product & { slug?: string };
+  href?: string;
+}) {
+  const productHref = product.slug ? `/product/${product.slug}` : href;
+
+  return (
+    <article className="group">
+      <div className="relative aspect-square overflow-hidden rounded-[15px] bg-thumb">
+        {product.badge ? (
+          <span className="absolute left-[15px] top-[15px] z-10 rounded-[20px] bg-amber px-2 text-[12px] font-semibold uppercase leading-[26px] text-white">
+            {product.badge}
+          </span>
+        ) : null}
+
+        <Image
+          src={product.image}
+          alt={product.title}
+          width={400}
+          height={400}
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 336px"
+          className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center opacity-0 transition-opacity duration-300 group-hover:pointer-events-auto group-hover:opacity-100">
+          <div className="flex items-center gap-2 rounded-full bg-white p-1.5 shadow-[0_4px_18px_rgba(0,0,0,0.12)]">
+            <Link
+              href={productHref}
+              aria-label={`Quick view ${product.title}`}
+              className="flex size-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-salmon hover:text-white"
+            >
+              <EyeIcon className="size-[18px]" />
+            </Link>
+            <Link
+              href="/wishlist"
+              aria-label={`Add ${product.title} to wishlist`}
+              className="flex size-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-salmon hover:text-white"
+            >
+              <HeartIcon className="size-[18px]" />
+            </Link>
+            <Link
+              href="/compare"
+              aria-label={`Compare ${product.title}`}
+              className="flex size-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-salmon hover:text-white"
+            >
+              <CompareIcon className="size-[18px]" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-[10px] py-[15px] text-center">
+        <EmptyStars className="justify-center" />
+        <h3 className="mb-[5px] mt-[3px] font-poppins text-[16px] font-medium capitalize leading-6 text-[#111]">
+          <Link href={productHref} className="transition-colors hover:text-salmon">
+            {product.title}
+          </Link>
+        </h3>
+        <p className="flex flex-wrap items-baseline justify-center gap-x-[6px] text-[14px] leading-6">
+          <del className="font-normal text-body">{product.oldPrice}</del>
+          <span className="font-medium text-salmon-soft">{product.price}</span>
+        </p>
+      </div>
+    </article>
+  );
+}
+
+/** Top Picks variant: white card, left-aligned copy, pink sale price. */
+export function PickCard({ product }: { product: Product }) {
+  return (
+    <article className="overflow-hidden rounded-[12px] bg-white p-[2px]">
+      <div className="relative aspect-square overflow-hidden rounded-[10px]">
+        {product.badge ? (
+          <span className="absolute left-[10px] top-[10px] z-10 rounded-[11px_12px_12px_0] bg-amber px-[15px] text-[12px] font-semibold uppercase leading-[30px] text-white">
+            {product.badge}
+          </span>
+        ) : null}
+        <Image
+          src={product.image}
+          alt={product.title}
+          width={400}
+          height={400}
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 271px"
+          className="size-full object-cover transition-transform duration-500 hover:scale-105"
+        />
+      </div>
+
+      <div className="px-3 pb-4 pt-2">
+        <h3 className="mb-[5px] font-poppins text-[16px] font-medium capitalize leading-6 text-steel">
+          <Link href="/shop" className="transition-colors hover:text-salmon">
+            {product.title}
+          </Link>
+        </h3>
+        <p className="flex items-center gap-[6px] text-[14px] leading-6 text-body">
+          <span>0</span>
+          <StarIcon className="size-[11px] text-[#d9d9d9]" />
+          <span aria-hidden="true" className="text-[#d9d9d9]">
+            |
+          </span>
+          <span>No review</span>
+        </p>
+        <p className="flex flex-wrap items-baseline gap-x-[6px]">
+          <del className="text-[14px] font-semibold leading-6 text-body">
+            {product.oldPrice}
+          </del>
+          <span className="text-[16px] font-semibold leading-6 text-pink-deep">
+            {product.price}
+          </span>
+        </p>
+      </div>
+    </article>
+  );
+}
