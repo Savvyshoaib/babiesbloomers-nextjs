@@ -2,10 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/lib/cart-context";
+import { useAppSelector } from "@/store/hooks";
 import { navLinks } from "@/lib/site-data";
+import { signOut } from "@/app/actions/auth";
 import {
   BagIcon,
   CloseIcon,
@@ -22,9 +24,28 @@ function isActivePath(pathname: string, href: string) {
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { itemCount, ready } = useCart();
   const badgeCount = ready ? itemCount : 0;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const user = useAppSelector((s) => s.auth.user);
+  const profile = useAppSelector((s) => s.auth.profile);
+  const initialized = useAppSelector((s) => s.auth.initialized);
+
+  const displayName = profile?.first_name
+    ? `${profile.first_name} ${profile.last_name ?? ""}`.trim()
+    : user?.email?.split("@")[0] ?? "";
+
+  const initials = displayName
+    ? displayName
+        .split(" ")
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase())
+        .join("")
+    : "U";
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
@@ -41,6 +62,24 @@ export function Header() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [menuOpen]);
+
+  // Close user menu on outside click
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [userMenuOpen]);
+
+  async function handleSignOut() {
+    setUserMenuOpen(false);
+    await signOut();
+    router.refresh();
+  }
 
   return (
     <header>
@@ -107,13 +146,82 @@ export function Header() {
             >
               <HeartIcon className="size-6" />
             </Link>
-            <Link
-              href="/my-account"
-              aria-label="My account"
-              className="hidden size-10 items-center justify-center transition-colors hover:text-salmon sm:flex"
-            >
-              <UserIcon className="size-6" />
-            </Link>
+
+            {/* Auth section */}
+            {!initialized ? (
+              /* Skeleton */
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="h-8 w-16 animate-pulse rounded-full bg-[#f0f0f0]" />
+                <div className="h-8 w-20 animate-pulse rounded-full bg-[#f0f0f0]" />
+              </div>
+            ) : user ? (
+              /* Logged in: avatar dropdown */
+              <div className="relative hidden sm:block" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen((o) => !o)}
+                  aria-label="User menu"
+                  aria-expanded={userMenuOpen}
+                  className="flex items-center gap-2 rounded-full border border-[#e8e8e8] px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:border-salmon hover:text-salmon"
+                >
+                  <span className="flex size-7 items-center justify-center rounded-full bg-salmon text-[11px] font-bold text-white">
+                    {initials}
+                  </span>
+                  <span className="max-w-[100px] truncate">{displayName}</span>
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-xl border border-[#f0f0f0] bg-white shadow-xl">
+                    <div className="border-b border-[#f5f5f5] px-4 py-3">
+                      <p className="truncate font-poppins text-[12px] text-body">
+                        {user.email}
+                      </p>
+                    </div>
+                    {[
+                      { label: "Dashboard", href: "/account" },
+                      { label: "My Orders", href: "/account/orders" },
+                      { label: "Invoices", href: "/account/invoices" },
+                      { label: "Settings", href: "/account/settings" },
+                    ].map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setUserMenuOpen(false)}
+                        className="block px-4 py-2.5 font-poppins text-[13px] font-medium text-ink transition-colors hover:bg-[#fff5f2] hover:text-salmon"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                    <div className="border-t border-[#f5f5f5]">
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        className="block w-full px-4 py-2.5 text-left font-poppins text-[13px] font-medium text-red-500 transition-colors hover:bg-red-50"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Logged out: Sign In + Sign Up */
+              <div className="hidden sm:flex items-center gap-2">
+                <Link
+                  href="/sign-in"
+                  className="flex h-9 items-center justify-center rounded-full border border-[#d6d6d6] px-4 font-poppins text-[13px] font-medium text-ink transition-colors hover:border-salmon hover:text-salmon"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="flex h-9 items-center justify-center rounded-full bg-salmon px-4 font-poppins text-[13px] font-semibold text-white transition-colors hover:bg-salmon-soft"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+
             <Link
               href="/cart"
               aria-label={
@@ -230,27 +338,72 @@ export function Header() {
               })}
             </ul>
 
-            <ul className="mt-6 flex flex-col border-t border-white/15 pt-4 sm:hidden">
-              {[
-                { label: "Wishlist", href: "/wishlist", Icon: HeartIcon },
-                { label: "My account", href: "/my-account", Icon: UserIcon },
-                {
-                  label: badgeCount > 0 ? `Cart (${badgeCount})` : "Cart",
-                  href: "/cart",
-                  Icon: BagIcon,
-                },
-              ].map(({ label, href, Icon }) => (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-3 py-3 font-poppins text-[16px] font-medium leading-[28px] text-white"
-                  >
-                    <Icon className="size-5" />
-                    {label}
-                  </Link>
-                </li>
-              ))}
+            <ul className="mt-6 flex flex-col border-t border-white/15 pt-4">
+              {user ? (
+                <>
+                  {[
+                    { label: "Dashboard", href: "/account" },
+                    { label: "My Orders", href: "/account/orders" },
+                    { label: "Invoices", href: "/account/invoices" },
+                    { label: "Settings", href: "/account/settings" },
+                  ].map((item) => (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setMenuOpen(false)}
+                        className="block py-3 font-poppins text-[16px] font-medium leading-[28px] text-white"
+                      >
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => { setMenuOpen(false); handleSignOut(); }}
+                      className="block py-3 font-poppins text-[16px] font-medium leading-[28px] text-red-400"
+                    >
+                      Sign Out
+                    </button>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <Link
+                      href="/sign-in"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 py-3 font-poppins text-[16px] font-medium leading-[28px] text-white"
+                    >
+                      <UserIcon className="size-5" />
+                      Sign In
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/sign-up"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 py-3 font-poppins text-[16px] font-medium leading-[28px] text-salmon"
+                    >
+                      Sign Up
+                    </Link>
+                  </li>
+                  {[
+                    { label: "Cart", href: "/cart", Icon: BagIcon },
+                  ].map(({ label, href, Icon }) => (
+                    <li key={href}>
+                      <Link
+                        href={href}
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 py-3 font-poppins text-[16px] font-medium leading-[28px] text-white"
+                      >
+                        <Icon className="size-5" />
+                        {label}
+                      </Link>
+                    </li>
+                  ))}
+                </>
+              )}
             </ul>
           </div>
         </div>
