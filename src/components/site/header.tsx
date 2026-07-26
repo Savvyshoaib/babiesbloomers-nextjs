@@ -14,13 +14,13 @@ import {
   CategoriesDesktopMegaMenu,
   CategoriesMobileAccordion,
 } from "./categories-menu";
+import { SiteSearch } from "./site-search";
 import {
   BagIcon,
   CloseIcon,
   CompareIcon,
   HeartIcon,
   MenuIcon,
-  SearchIcon,
   UserIcon,
 } from "./icons";
 
@@ -143,28 +143,10 @@ export function Header() {
             <MenuIcon className="size-6" />
           </button>
 
-          <form
-            role="search"
-            onSubmit={(e) => e.preventDefault()}
-            className="hidden h-[42px] w-[285px] shrink-0 items-center rounded-[20px] border border-dashed border-[#d6d6d6] bg-white lg:flex"
-          >
-            <label htmlFor="site-search" className="sr-only">
-              Search products
-            </label>
-            <input
-              id="site-search"
-              type="search"
-              placeholder="Enter key to search"
-              className="h-full min-w-0 flex-1 rounded-l-[20px] bg-transparent px-[15px] text-[14px] text-body placeholder:text-body focus:outline-none"
-            />
-            <button
-              type="submit"
-              aria-label="Search"
-              className="flex h-full w-[50px] shrink-0 items-center justify-center rounded-r-[20px] text-[#454545]"
-            >
-              <SearchIcon className="size-[18px]" />
-            </button>
-          </form>
+          <SiteSearch
+            variant="desktop"
+            className="hidden w-[285px] shrink-0 lg:block"
+          />
 
           <Link
             href="/"
@@ -377,28 +359,11 @@ export function Header() {
               </button>
             </div>
 
-            <form
-              role="search"
-              onSubmit={(e) => e.preventDefault()}
-              className="mb-6 flex h-10 items-center rounded-[20px] bg-white"
-            >
-              <label htmlFor="mobile-search" className="sr-only">
-                Search products
-              </label>
-              <input
-                id="mobile-search"
-                type="search"
-                placeholder="Enter key to search"
-                className="h-full min-w-0 flex-1 bg-transparent px-[15px] text-[14px] text-body placeholder:text-body focus:outline-none"
-              />
-              <button
-                type="submit"
-                aria-label="Search"
-                className="flex size-10 items-center justify-center text-ink"
-              >
-                <SearchIcon className="size-[18px]" />
-              </button>
-            </form>
+            <SiteSearch
+              variant="mobile"
+              className="mb-6"
+              onNavigate={() => setMenuOpen(false)}
+            />
 
             <ul className="flex flex-col">
               {navLinks.map((link) => {

@@ -24,8 +24,26 @@ export type SiteNewArrivalsBanner = {
   alt: string;
 };
 
+export type SocialNetwork =
+  | "facebook"
+  | "instagram"
+  | "pinterest"
+  | "twitter"
+  | "youtube"
+  | "whatsapp";
+
+export const SOCIAL_NETWORKS: { value: SocialNetwork; label: string }[] = [
+  { value: "facebook", label: "Facebook" },
+  { value: "instagram", label: "Instagram" },
+  { value: "pinterest", label: "Pinterest" },
+  { value: "twitter", label: "Twitter / X" },
+  { value: "youtube", label: "YouTube" },
+  { value: "whatsapp", label: "WhatsApp" },
+];
+
 export type SiteSocialLink = {
-  network: "facebook" | "instagram" | "pinterest" | "twitter";
+  id: string;
+  network: SocialNetwork;
   href: string;
   enabled: boolean;
 };
@@ -42,13 +60,30 @@ export type SiteVision = {
   body: string;
 };
 
+export type SiteDreamwear = {
+  backgroundImage: string;
+  image: string;
+  imageAlt: string;
+  title: string;
+  description: string;
+  features: string[];
+  ctaLabel: string;
+  ctaHref: string;
+  phone: string;
+  /** Optional custom link (tel:, https://wa.me/…). Empty = auto tel: from phone. */
+  phoneHref: string;
+  phoneLabel: string;
+};
+
 export type SiteContact = {
   mapEnabled: boolean;
   mapEmbedUrl: string;
   mapTitle: string;
   locations: string[];
   phone: string;
+  phoneHref: string;
   hotline: string;
+  hotlineHref: string;
   email: string;
   hours: string;
 };
@@ -61,6 +96,7 @@ export type SiteContent = {
   socialLinks: SiteSocialLink[];
   testimonials: SiteTestimonial[];
   vision: SiteVision;
+  dreamwear: SiteDreamwear;
   contact: SiteContact;
 };
 
@@ -94,15 +130,55 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     alt: "Two children wearing the new arrivals collection",
   },
   socialLinks: [
-    { network: "facebook", href: "https://facebook.com", enabled: true },
-    { network: "instagram", href: "https://instagram.com", enabled: true },
-    { network: "pinterest", href: "https://pinterest.com", enabled: true },
-    { network: "twitter", href: "https://twitter.com", enabled: true },
+    {
+      id: "facebook",
+      network: "facebook",
+      href: "https://facebook.com",
+      enabled: true,
+    },
+    {
+      id: "instagram",
+      network: "instagram",
+      href: "https://instagram.com",
+      enabled: true,
+    },
+    {
+      id: "pinterest",
+      network: "pinterest",
+      href: "https://pinterest.com",
+      enabled: true,
+    },
+    {
+      id: "twitter",
+      network: "twitter",
+      href: "https://twitter.com",
+      enabled: true,
+    },
   ],
   testimonials: staticTestimonials.map((t) => ({ ...t })),
   vision: {
     title: "Our Vision",
     body: "At Babies Bloomers, our vision is to create a world where every baby is wrapped in comfort, quality, and love. We are dedicated to designing thoughtfully crafted baby essentials that combine premium fabrics, timeless style, and everyday practicality, giving parents confidence while ensuring little ones feel safe, cozy, and happy through every precious milestone.",
+  },
+  dreamwear: {
+    backgroundImage: "/images/Babies Bloomers Dreamwear.jpg",
+    image: "/images/sample-image-2.png",
+    imageAlt:
+      "Smiling girl resting her head on her hands in Babies Bloomers sleepwear",
+    title: "Babies Bloomers Dreamwear",
+    description:
+      "Wrap your little ones in cloud-like comfort with the Babies Bloomers sleepwear collection. Thoughtfully crafted with ultra-soft fabrics for peaceful nights, cozy mornings, and all-day comfort.",
+    features: [
+      "Ultra Soft",
+      "Gentle Comfort",
+      "Breathable Fabric",
+      "All-Day Cozy",
+    ],
+    ctaLabel: "Explore",
+    ctaHref: "/contact",
+    phone: "+92 347 8563067",
+    phoneHref: "tel:+923478563067",
+    phoneLabel: "Online 24/7",
   },
   contact: {
     mapEnabled: true,
@@ -115,7 +191,9 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       "Store 3: 102 West 16th Street, Miami FL, USA",
     ],
     phone: "+1-541-754-3010",
+    phoneHref: "",
     hotline: "+1-541-651-4228",
+    hotlineHref: "",
     email: "kidxtore@elysa.com",
     hours: "Monday – Sunday: 8:00 am – 10:00pm",
   },
@@ -141,15 +219,13 @@ export function mergeSiteContent(partial: Partial<SiteContent> | null | undefine
       ...DEFAULT_SITE_CONTENT.newArrivalsBanner,
       ...partial.newArrivalsBanner,
     },
-    socialLinks:
-      partial.socialLinks?.length
-        ? partial.socialLinks
-        : DEFAULT_SITE_CONTENT.socialLinks,
+    socialLinks: mergeSocialLinks(partial.socialLinks),
     testimonials:
       partial.testimonials?.length
         ? partial.testimonials
         : DEFAULT_SITE_CONTENT.testimonials,
     vision: { ...DEFAULT_SITE_CONTENT.vision, ...partial.vision },
+    dreamwear: mergeDreamwear(partial.dreamwear),
     contact: {
       ...DEFAULT_SITE_CONTENT.contact,
       ...contactPartial,
@@ -159,8 +235,72 @@ export function mergeSiteContent(partial: Partial<SiteContent> | null | undefine
       mapEmbedUrl: extractMapEmbedUrl(
         contactPartial.mapEmbedUrl ?? DEFAULT_SITE_CONTENT.contact.mapEmbedUrl,
       ),
+      phoneHref: String(
+        contactPartial.phoneHref ?? DEFAULT_SITE_CONTENT.contact.phoneHref,
+      ),
+      hotlineHref: String(
+        contactPartial.hotlineHref ?? DEFAULT_SITE_CONTENT.contact.hotlineHref,
+      ),
       locations,
     },
+  };
+}
+
+const SOCIAL_NETWORK_VALUES = SOCIAL_NETWORKS.map((n) => n.value);
+
+function isSocialNetwork(value: string): value is SocialNetwork {
+  return (SOCIAL_NETWORK_VALUES as string[]).includes(value);
+}
+
+function mergeSocialLinks(
+  partial: SiteSocialLink[] | Partial<SiteSocialLink>[] | null | undefined,
+): SiteSocialLink[] {
+  if (!Array.isArray(partial) || partial.length === 0) {
+    return DEFAULT_SITE_CONTENT.socialLinks;
+  }
+
+  return partial
+    .map((row, index) => {
+      const networkRaw = String(row.network ?? "facebook");
+      const network = isSocialNetwork(networkRaw) ? networkRaw : "facebook";
+      const id =
+        String(row.id ?? "").trim() ||
+        `${network}-${index}-${Math.random().toString(36).slice(2, 7)}`;
+      return {
+        id,
+        network,
+        href: String(row.href ?? "").trim(),
+        enabled: Boolean(row.enabled ?? true),
+      };
+    })
+    .slice(0, 12);
+}
+
+/** Build a clickable phone URL from display number and optional custom link. */
+export function resolvePhoneHref(
+  phone: string,
+  phoneHref?: string | null,
+): string {
+  const custom = String(phoneHref ?? "").trim();
+  if (custom) return custom;
+  const digits = phone.replace(/[^\d+]/g, "");
+  return digits ? `tel:${digits}` : "#";
+}
+
+function mergeDreamwear(
+  partial: Partial<SiteDreamwear> | null | undefined,
+): SiteDreamwear {
+  const base = DEFAULT_SITE_CONTENT.dreamwear;
+  if (!partial) return base;
+  const features = Array.isArray(partial.features)
+    ? partial.features
+        .map((f) => String(f ?? "").trim())
+        .filter(Boolean)
+    : base.features;
+  return {
+    ...base,
+    ...partial,
+    features: features.length > 0 ? features.slice(0, 8) : base.features,
   };
 }
 

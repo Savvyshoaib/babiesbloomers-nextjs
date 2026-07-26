@@ -6,6 +6,7 @@ import { submitContactMessage } from "@/app/actions/admin";
 import { ButtonSpinner } from "@/components/site/button-spinner";
 import { useAppSelector } from "@/store/hooks";
 import { selectSiteContent } from "@/store/site-content-slice";
+import { resolvePhoneHref } from "@/lib/site-content-types";
 
 type FormState = {
   name: string;
@@ -200,7 +201,10 @@ export function ContactSection() {
                     <li>
                     Mobile:{" "}
                     <a
-                      href={`tel:${contactInfo.phone}`}
+                      href={resolvePhoneHref(
+                        contactInfo.phone,
+                        contactInfo.phoneHref,
+                      )}
                       className="transition-colors hover:text-salmon"
                     >
                       {contactInfo.phone}
@@ -211,7 +215,10 @@ export function ContactSection() {
                     <li>
                     Hotline:{" "}
                     <a
-                      href={`tel:${contactInfo.hotline}`}
+                      href={resolvePhoneHref(
+                        contactInfo.hotline,
+                        contactInfo.hotlineHref,
+                      )}
                       className="transition-colors hover:text-salmon"
                     >
                       {contactInfo.hotline}

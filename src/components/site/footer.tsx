@@ -12,6 +12,8 @@ import {
   MailIcon,
   PinterestIcon,
   TwitterIcon,
+  WhatsappIcon,
+  YoutubeIcon,
 } from "./icons";
 
 const socialIcons = {
@@ -19,6 +21,8 @@ const socialIcons = {
   instagram: InstagramIcon,
   pinterest: PinterestIcon,
   twitter: TwitterIcon,
+  youtube: YoutubeIcon,
+  whatsapp: WhatsappIcon,
 } as const;
 
 /**
@@ -72,11 +76,12 @@ export function Footer() {
             </ul>
           </nav>
 
-          <ul className="mt-[40px] flex items-center justify-center gap-[15px]">
-            {socials.map(({ network, href }) => {
+          <ul className="mt-[40px] flex flex-wrap items-center justify-center gap-[15px]">
+            {socials.map(({ id, network, href }) => {
               const Icon = socialIcons[network];
+              if (!Icon) return null;
               return (
-                <li key={network}>
+                <li key={id}>
                   <a
                     href={href}
                     target="_blank"

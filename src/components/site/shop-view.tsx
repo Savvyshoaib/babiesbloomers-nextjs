@@ -158,6 +158,7 @@ export function ShopView({
   const [priceMax, setPriceMax] = useState(priceBounds.max);
   const [appliedMin, setAppliedMin] = useState(0);
   const [appliedMax, setAppliedMax] = useState(Number.POSITIVE_INFINITY);
+  const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
 
   // Keep category filter in sync with ?category= from mega menu / shared links.
   useEffect(() => {
@@ -165,6 +166,10 @@ export function ShopView({
     setCategory(fromUrl);
     setPage(1);
   }, [searchParams]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   function selectCategory(next: string | null) {
     setCategory(next);
@@ -214,6 +219,14 @@ export function ShopView({
     if (category) {
       list = list.filter((p) => matchesCategory(p, category));
     }
+    if (searchQuery) {
+      list = list.filter(
+        (p) =>
+          p.title.toLowerCase().includes(searchQuery) ||
+          p.slug.toLowerCase().includes(searchQuery) ||
+          p.categories.some((c) => c.toLowerCase().includes(searchQuery)),
+      );
+    }
     const sorted = [...list];
     switch (sort) {
       case "price":
@@ -238,7 +251,15 @@ export function ShopView({
         break;
     }
     return sorted;
-  }, [appliedMin, appliedMax, category, defaultSort, products, sort]);
+  }, [
+    appliedMin,
+    appliedMax,
+    category,
+    defaultSort,
+    products,
+    searchQuery,
+    sort,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const currentPage = Math.min(page, totalPages);

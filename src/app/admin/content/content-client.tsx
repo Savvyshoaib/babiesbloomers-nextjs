@@ -10,6 +10,7 @@ import {
 } from "@/components/admin/admin-forms";
 import { ButtonSpinner } from "@/components/site/button-spinner";
 import type { SiteContent } from "@/lib/site-content-types";
+import { SOCIAL_NETWORKS } from "@/lib/site-content-types";
 import { toast } from "sonner";
 
 function ImageUploadField({
@@ -313,51 +314,113 @@ export function SiteContentForms({ initial }: { initial: SiteContent }) {
         />
       </SectionCard>
 
-      <SectionCard title="Social icons" description="Footer social links.">
+      <SectionCard
+        title="Social icons"
+        description="Footer social links. Add or remove platforms as needed."
+      >
         <div className="space-y-3">
           {content.socialLinks.map((link, index) => (
             <div
-              key={link.network}
-              className="grid gap-3 rounded-xl border border-[#f0ece8] p-3 sm:grid-cols-[140px_1fr_auto] sm:items-center"
+              key={link.id}
+              className="space-y-3 rounded-xl border border-[#f0ece8] p-3"
             >
-              <p className="font-poppins text-[13px] font-semibold capitalize text-ink">
-                {link.network}
-              </p>
-              <input
-                value={link.href}
-                onChange={(e) =>
-                  setContent((c) => {
-                    const socialLinks = [...c.socialLinks];
-                    socialLinks[index] = {
-                      ...socialLinks[index]!,
-                      href: e.target.value,
-                    };
-                    return { ...c, socialLinks };
-                  })
-                }
-                className="h-10 rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
-              />
-              <label className="flex items-center gap-2 font-poppins text-[13px] text-ink">
-                <input
-                  type="checkbox"
-                  checked={link.enabled}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-poppins text-[13px] font-semibold text-ink">
+                  Social {index + 1}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setContent((c) => ({
+                      ...c,
+                      socialLinks: c.socialLinks.filter((_, i) => i !== index),
+                    }))
+                  }
+                  className="cursor-pointer font-poppins text-[12px] font-medium text-red-500 hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-[160px_1fr_auto] sm:items-center">
+                <select
+                  value={link.network}
                   onChange={(e) =>
                     setContent((c) => {
                       const socialLinks = [...c.socialLinks];
                       socialLinks[index] = {
                         ...socialLinks[index]!,
-                        enabled: e.target.checked,
+                        network: e.target.value as typeof link.network,
                       };
                       return { ...c, socialLinks };
                     })
                   }
-                  className="size-4 accent-salmon"
+                  className="h-10 rounded-lg border border-[#cfcfcf] bg-white px-3 font-poppins text-[13px] capitalize text-ink"
+                >
+                  {SOCIAL_NETWORKS.map((n) => (
+                    <option key={n.value} value={n.value}>
+                      {n.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={link.href}
+                  onChange={(e) =>
+                    setContent((c) => {
+                      const socialLinks = [...c.socialLinks];
+                      socialLinks[index] = {
+                        ...socialLinks[index]!,
+                        href: e.target.value,
+                      };
+                      return { ...c, socialLinks };
+                    })
+                  }
+                  placeholder="https://…"
+                  className="h-10 rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
                 />
-                Enabled
-              </label>
+                <label className="flex items-center gap-2 font-poppins text-[13px] text-ink">
+                  <input
+                    type="checkbox"
+                    checked={link.enabled}
+                    onChange={(e) =>
+                      setContent((c) => {
+                        const socialLinks = [...c.socialLinks];
+                        socialLinks[index] = {
+                          ...socialLinks[index]!,
+                          enabled: e.target.checked,
+                        };
+                        return { ...c, socialLinks };
+                      })
+                    }
+                    className="size-4 accent-salmon"
+                  />
+                  Enabled
+                </label>
+              </div>
             </div>
           ))}
         </div>
+        {content.socialLinks.length < 12 ? (
+          <button
+            type="button"
+            onClick={() =>
+              setContent((c) => ({
+                ...c,
+                socialLinks: [
+                  ...c.socialLinks,
+                  {
+                    id: `social-${Date.now()}`,
+                    network: "instagram",
+                    href: "",
+                    enabled: true,
+                  },
+                ],
+              }))
+            }
+            className="cursor-pointer font-poppins text-[13px] font-semibold text-salmon hover:underline"
+          >
+            + Add social icon
+          </button>
+        ) : null}
       </SectionCard>
 
       <SectionCard
@@ -436,32 +499,87 @@ export function SiteContentForms({ initial }: { initial: SiteContent }) {
         </label>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          {(
-            [
-              ["phone", "Mobile"],
-              ["hotline", "Hotline"],
-              ["email", "Contact email"],
-              ["hours", "Open hours"],
-            ] as const
-          ).map(([key, label]) => (
-            <label
-              key={key}
-              className="space-y-1.5 font-poppins text-[13px] font-medium text-ink"
-            >
-              <span>{label}</span>
-              <input
-                type={key === "email" ? "email" : "text"}
-                value={content.contact[key]}
-                onChange={(e) =>
-                  setContent((c) => ({
-                    ...c,
-                    contact: { ...c.contact, [key]: e.target.value },
-                  }))
-                }
-                className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
-              />
-            </label>
-          ))}
+          <label className="space-y-1.5 font-poppins text-[13px] font-medium text-ink">
+            <span>Mobile</span>
+            <input
+              value={content.contact.phone}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  contact: { ...c.contact, phone: e.target.value },
+                }))
+              }
+              className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+            />
+          </label>
+          <label className="space-y-1.5 font-poppins text-[13px] font-medium text-ink">
+            <span>Mobile link</span>
+            <input
+              value={content.contact.phoneHref}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  contact: { ...c.contact, phoneHref: e.target.value },
+                }))
+              }
+              placeholder="tel:+92… or https://wa.me/…"
+              className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+            />
+          </label>
+          <label className="space-y-1.5 font-poppins text-[13px] font-medium text-ink">
+            <span>Hotline</span>
+            <input
+              value={content.contact.hotline}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  contact: { ...c.contact, hotline: e.target.value },
+                }))
+              }
+              className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+            />
+          </label>
+          <label className="space-y-1.5 font-poppins text-[13px] font-medium text-ink">
+            <span>Hotline link</span>
+            <input
+              value={content.contact.hotlineHref}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  contact: { ...c.contact, hotlineHref: e.target.value },
+                }))
+              }
+              placeholder="tel:+92… or https://wa.me/…"
+              className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+            />
+          </label>
+          <label className="space-y-1.5 font-poppins text-[13px] font-medium text-ink">
+            <span>Contact email</span>
+            <input
+              type="email"
+              value={content.contact.email}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  contact: { ...c.contact, email: e.target.value },
+                }))
+              }
+              className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+            />
+          </label>
+          <label className="space-y-1.5 font-poppins text-[13px] font-medium text-ink">
+            <span>Open hours</span>
+            <input
+              value={content.contact.hours}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  contact: { ...c.contact, hours: e.target.value },
+                }))
+              }
+              className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+            />
+          </label>
         </div>
       </SectionCard>
 
@@ -487,6 +605,188 @@ export function SiteContentForms({ initial }: { initial: SiteContent }) {
           }
           className="w-full rounded-lg border border-[#cfcfcf] px-3 py-2.5 font-poppins text-[13px]"
         />
+      </SectionCard>
+
+      <SectionCard
+        title="Dreamwear section"
+        description="Homepage peach band — image, title, features, CTA, and phone."
+      >
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ImageUploadField
+            label="Background image"
+            value={content.dreamwear.backgroundImage}
+            onChange={(backgroundImage) =>
+              setContent((c) => ({
+                ...c,
+                dreamwear: { ...c.dreamwear, backgroundImage },
+              }))
+            }
+            hint="Wide peach / salmon band photo."
+          />
+          <ImageUploadField
+            label="Feature image"
+            value={content.dreamwear.image}
+            onChange={(image) =>
+              setContent((c) => ({
+                ...c,
+                dreamwear: { ...c.dreamwear, image },
+              }))
+            }
+            hint="Main product / model image on the left."
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block font-poppins text-[13px] font-medium text-ink">
+            Image alt text
+          </label>
+          <input
+            value={content.dreamwear.imageAlt}
+            onChange={(e) =>
+              setContent((c) => ({
+                ...c,
+                dreamwear: { ...c.dreamwear, imageAlt: e.target.value },
+              }))
+            }
+            className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block font-poppins text-[13px] font-medium text-ink">
+            Title
+          </label>
+          <input
+            value={content.dreamwear.title}
+            onChange={(e) =>
+              setContent((c) => ({
+                ...c,
+                dreamwear: { ...c.dreamwear, title: e.target.value },
+              }))
+            }
+            className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block font-poppins text-[13px] font-medium text-ink">
+            Description
+          </label>
+          <textarea
+            rows={4}
+            value={content.dreamwear.description}
+            onChange={(e) =>
+              setContent((c) => ({
+                ...c,
+                dreamwear: { ...c.dreamwear, description: e.target.value },
+              }))
+            }
+            className="w-full rounded-lg border border-[#cfcfcf] px-3 py-2.5 font-poppins text-[13px]"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block font-poppins text-[13px] font-medium text-ink">
+            Features (one per line, up to 8)
+          </label>
+          <textarea
+            rows={4}
+            value={content.dreamwear.features.join("\n")}
+            onChange={(e) =>
+              setContent((c) => ({
+                ...c,
+                dreamwear: {
+                  ...c.dreamwear,
+                  features: e.target.value
+                    .split("\n")
+                    .map((line) => line.trim())
+                    .filter(Boolean)
+                    .slice(0, 8),
+                },
+              }))
+            }
+            className="w-full rounded-lg border border-[#cfcfcf] px-3 py-2.5 font-poppins text-[13px]"
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block font-poppins text-[13px] font-medium text-ink">
+              Button label
+            </label>
+            <input
+              value={content.dreamwear.ctaLabel}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  dreamwear: { ...c.dreamwear, ctaLabel: e.target.value },
+                }))
+              }
+              className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block font-poppins text-[13px] font-medium text-ink">
+              Button link
+            </label>
+            <input
+              value={content.dreamwear.ctaHref}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  dreamwear: { ...c.dreamwear, ctaHref: e.target.value },
+                }))
+              }
+              className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block font-poppins text-[13px] font-medium text-ink">
+              Phone
+            </label>
+            <input
+              value={content.dreamwear.phone}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  dreamwear: { ...c.dreamwear, phone: e.target.value },
+                }))
+              }
+              className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block font-poppins text-[13px] font-medium text-ink">
+              Phone link
+            </label>
+            <input
+              value={content.dreamwear.phoneHref}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  dreamwear: { ...c.dreamwear, phoneHref: e.target.value },
+                }))
+              }
+              placeholder="tel:+92… or https://wa.me/…"
+              className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block font-poppins text-[13px] font-medium text-ink">
+              Phone caption
+            </label>
+            <input
+              value={content.dreamwear.phoneLabel}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  dreamwear: { ...c.dreamwear, phoneLabel: e.target.value },
+                }))
+              }
+              className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+            />
+          </div>
+        </div>
       </SectionCard>
 
       <SectionCard
