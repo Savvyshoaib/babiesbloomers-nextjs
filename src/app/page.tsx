@@ -21,7 +21,6 @@ export default function Home() {
         <TopPicks />
         <Vision />
         <Testimonials />
-        
         {/* <BrandLogos /> */}
       </main>
       <Footer />
