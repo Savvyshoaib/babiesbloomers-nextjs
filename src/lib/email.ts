@@ -354,6 +354,65 @@ export async function sendContactReplyEmail(payload: {
   });
 }
 
+export async function sendPasswordResetEmail(payload: {
+  to: string;
+  resetUrl: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const html = emailShell(
+    "Reset your password",
+    `
+    <h1 style="margin:0 0 12px;font-family:Georgia,serif;font-size:24px;color:#121b28;">Reset your password</h1>
+    <p style="margin:0 0 16px;font-size:14px;line-height:22px;">
+      We received a request to reset the password for
+      <strong style="color:#121b28;">${escapeHtml(payload.to)}</strong>.
+      Click the button below to choose a new password.
+    </p>
+    <a href="${escapeHtml(payload.resetUrl)}" style="display:inline-block;background:#f3aa9b;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 22px;border-radius:999px;">
+      Reset password
+    </a>
+    <p style="margin:22px 0 0;font-size:12px;line-height:19px;color:#999;">
+      This link expires soon. If you did not request a reset, you can ignore this email.
+    </p>
+    <p style="margin:12px 0 0;font-size:11px;line-height:18px;color:#bbb;word-break:break-all;">
+      Or copy this link:<br />${escapeHtml(payload.resetUrl)}
+    </p>
+    `,
+  );
+
+  return sendMail({
+    to: payload.to,
+    subject: "Reset your Babies Bloomers password",
+    html,
+  });
+}
+
+export async function sendWelcomeEmail(payload: {
+  to: string;
+  firstName: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const loginUrl = `${siteUrl()}/sign-in`;
+  const name = payload.firstName || "there";
+
+  const html = emailShell(
+    "Welcome to Babies Bloomers",
+    `
+    <h1 style="margin:0 0 12px;font-family:Georgia,serif;font-size:24px;color:#121b28;">Welcome, ${escapeHtml(name)}!</h1>
+    <p style="margin:0 0 16px;font-size:14px;line-height:22px;">
+      Your Babies Bloomers account is ready. Sign in anytime to track orders, manage your wishlist, and update your details.
+    </p>
+    <a href="${loginUrl}" style="display:inline-block;background:#f3aa9b;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 22px;border-radius:999px;">
+      Go to your account
+    </a>
+    `,
+  );
+
+  return sendMail({
+    to: payload.to,
+    subject: "Welcome to Babies Bloomers",
+    html,
+  });
+}
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")

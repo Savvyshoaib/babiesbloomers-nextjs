@@ -3,8 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createSession } from "@/lib/session";
 
 /**
- * Handles Supabase Auth email redirects (password recovery, confirmations).
- * Configure in Supabase Dashboard → Auth → URL Configuration:
+ * Handles Auth recovery redirects after the user clicks the SMTP reset link.
+ * The email itself is sent via Google SMTP; this route only exchanges the code.
+ * Configure in Supabase → Auth → URL Configuration:
  *   Redirect URLs: https://your-domain/auth/callback
  */
 export async function GET(request: Request) {

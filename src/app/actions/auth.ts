@@ -6,6 +6,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createSession, deleteSession, getSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { fail, ok, type ApiResponse } from "@/lib/api-response";
+import {
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+} from "@/lib/email";
 
 function siteUrl() {
   return (
@@ -69,46 +73,46 @@ export async function signUp(
     return fail("Password must be at least 8 characters.");
   }
 
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.auth.signUp({
+  // Create via service role so Supabase does not send its own auth emails.
+  // Welcome mail goes out through our SMTP.
+  const admin = createAdminClient();
+  const { data: created, error } = await admin.auth.admin.createUser({
     email,
     password,
-    options: {
-      data: { full_name: `${firstName} ${lastName}` },
-    },
+    email_confirm: true,
+    user_metadata: { full_name: `${firstName} ${lastName}` },
   });
 
-  if (error) {
-    const msg = error.message.toLowerCase();
+  if (error || !created.user) {
+    const msg = (error?.message ?? "").toLowerCase();
     if (
       msg.includes("already registered") ||
       msg.includes("already been registered") ||
       msg.includes("already exists") ||
-      msg.includes("user already")
+      msg.includes("user already") ||
+      error?.status === 422
     ) {
       return fail(
         "An account with this email already exists. Please sign in.",
       );
     }
-    return fail(error.message);
+    return fail(error?.message ?? "Something went wrong. Please try again.");
   }
 
-  if (!data.user) {
-    return fail("Something went wrong. Please try again.");
+  await admin.from("profiles").upsert({
+    id: created.user.id,
+    first_name: firstName,
+    last_name: lastName,
+    email,
+    role: "customer",
+  });
+
+  const welcome = await sendWelcomeEmail({ to: email, firstName });
+  if (!welcome.ok) {
+    console.error("[auth] welcome email failed:", welcome.error);
   }
 
-  const admin = createAdminClient();
-  await admin
-    .from("profiles")
-    .update({
-      first_name: firstName,
-      last_name: lastName,
-      email,
-    })
-    .eq("id", data.user.id);
-
-  await createSession(data.user.id, email);
+  await createSession(created.user.id, email);
   redirect("/account");
 }
 
@@ -181,21 +185,44 @@ export async function requestPasswordReset(
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (!email) return fail("Please enter your email address.");
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: recoveryRedirect(),
-  });
+  const genericOk =
+    "If an account exists for this email, a password reset link has been sent.";
 
-  if (error) {
-    return fail(
-      "Could not send reset email. Please check the address and try again.",
-      error.message,
-    );
+  try {
+    const admin = createAdminClient();
+    // Generate recovery link without sending Supabase's built-in email.
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: {
+        redirectTo: recoveryRedirect(),
+      },
+    });
+
+    if (error || !data?.properties?.action_link) {
+      // Do not reveal whether the email exists.
+      console.error("[auth] reset link generate failed:", error?.message);
+      return ok(genericOk);
+    }
+
+    const mail = await sendPasswordResetEmail({
+      to: email,
+      resetUrl: data.properties.action_link,
+    });
+
+    if (!mail.ok) {
+      console.error("[auth] reset SMTP failed:", mail.error);
+      return fail(
+        "Could not send reset email right now. Please try again shortly.",
+        mail.error,
+      );
+    }
+
+    return ok(genericOk);
+  } catch (err) {
+    console.error("[auth] reset password error:", err);
+    return ok(genericOk);
   }
-
-  return ok(
-    "If an account exists for this email, a password reset link has been sent.",
-  );
 }
 
 // ─────────────────────────────────────────────────────────────
