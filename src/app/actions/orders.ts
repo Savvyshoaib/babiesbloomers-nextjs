@@ -291,7 +291,7 @@ export async function placeOrder(
   revalidatePath("/account/invoices");
   revalidatePath("/account");
 
-  return ok("Order placed successfully.", {
+  return ok("Order confirmed.", {
     orderId: order.id,
     invoiceNumber,
   });

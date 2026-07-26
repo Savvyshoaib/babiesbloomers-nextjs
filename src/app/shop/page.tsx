@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Footer } from "@/components/site/footer";
 import { Header } from "@/components/site/header";
 import { PageBanner } from "@/components/site/page-banner";
@@ -22,7 +23,15 @@ export default function ShopPage() {
             { label: "Shop" },
           ]}
         />
-        <ShopView />
+        <Suspense
+          fallback={
+            <div className="shell py-16">
+              <div className="h-64 animate-pulse rounded-2xl bg-[#f0ece8]" />
+            </div>
+          }
+        >
+          <ShopView />
+        </Suspense>
       </main>
       <Footer />
     </>

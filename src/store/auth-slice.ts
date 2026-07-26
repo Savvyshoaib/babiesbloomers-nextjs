@@ -11,6 +11,7 @@ export type UserProfile = {
   last_name: string | null;
   phone: string | null;
   avatar_url: string | null;
+  role?: "customer" | "admin" | string | null;
 };
 
 type AuthState = {

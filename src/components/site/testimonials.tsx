@@ -2,13 +2,18 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { testimonials } from "@/lib/site-data";
+import { useAppSelector } from "@/store/hooks";
+import { selectSiteContent } from "@/store/site-content-slice";
 import { QuoteIcon } from "./icons";
 import { SectionHeading } from "./section-heading";
 
 export function Testimonials() {
-  const [active, setActive] = useState(1);
-  const current = testimonials[active];
+  const { testimonials } = useAppSelector(selectSiteContent);
+  const [active, setActive] = useState(0);
+  const safeIndex = Math.min(active, Math.max(0, testimonials.length - 1));
+  const current = testimonials[safeIndex];
+
+  if (!current) return null;
 
   return (
     <section
@@ -16,7 +21,6 @@ export function Testimonials() {
       style={{ backgroundImage: "url('/images/bg-testimonials.jpg')" }}
       aria-labelledby="testimonials-heading"
     >
-      {/* The dashed rule runs edge to edge and the slider marker sits on it. */}
       <div className="border-b-2 border-dashed border-[#d6d6d6]">
         <div className="shell">
           <SectionHeading align="center" separator="pink">
@@ -44,22 +48,22 @@ export function Testimonials() {
           <div
             role="tablist"
             aria-label="Choose a review"
-            className="mt-[10px] flex items-end justify-center gap-[28px]"
+            className="mt-[10px] flex max-w-full flex-wrap items-end justify-center gap-3 overflow-x-auto px-1 sm:gap-[28px]"
           >
             {testimonials.map((testimonial, index) => {
-              const isActive = index === active;
+              const isActive = index === safeIndex;
               return (
                 <button
-                  key={testimonial.name}
+                  key={`${testimonial.name}-${index}`}
                   type="button"
                   role="tab"
                   aria-selected={isActive}
                   aria-label={`Read the review from ${testimonial.name}`}
                   onClick={() => setActive(index)}
-                  className={`overflow-hidden rounded-full transition-all duration-300 ${
+                  className={`shrink-0 cursor-pointer overflow-hidden rounded-full transition-all duration-300 ${
                     isActive
-                      ? "size-[100px] opacity-100"
-                      : "size-[70px] opacity-60 hover:opacity-90"
+                      ? "size-[72px] opacity-100 sm:size-[100px]"
+                      : "size-[52px] opacity-60 hover:opacity-90 sm:size-[70px]"
                   }`}
                 >
                   <Image
@@ -68,6 +72,7 @@ export function Testimonials() {
                     width={160}
                     height={160}
                     className="size-full object-cover"
+                    unoptimized={testimonial.avatar.startsWith("http")}
                   />
                 </button>
               );

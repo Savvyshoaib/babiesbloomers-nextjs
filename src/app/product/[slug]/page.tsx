@@ -5,20 +5,21 @@ import { Header } from "@/components/site/header";
 import { PageBanner } from "@/components/site/page-banner";
 import { ProductDetail } from "@/components/site/product-detail";
 import {
-  getCategoryLabel,
-  getShopProduct,
-  shopProducts,
-} from "@/lib/site-data";
+  fetchCatalogCategories,
+  fetchCatalogProductBySlug,
+  fetchCatalogProducts,
+} from "@/lib/catalog";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return shopProducts.map((p) => ({ slug: p.slug }));
+export async function generateStaticParams() {
+  const products = await fetchCatalogProducts();
+  return products.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const product = getShopProduct(slug);
+  const product = await fetchCatalogProductBySlug(slug);
   if (!product) return { title: "Product – Babies Bloomers" };
   return {
     title: `${product.title} – Babies Bloomers`,
@@ -28,13 +29,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const product = getShopProduct(slug);
+  const [product, categories] = await Promise.all([
+    fetchCatalogProductBySlug(slug),
+    fetchCatalogCategories(),
+  ]);
   if (!product) notFound();
 
   const categorySlug = product.categories[0];
-  const categoryLabel = categorySlug
-    ? getCategoryLabel(categorySlug)
-    : "Shop";
+  const categoryLabel =
+    categories.find((c) => c.slug === categorySlug)?.label ??
+    categorySlug ??
+    "Shop";
 
   return (
     <>
@@ -48,7 +53,7 @@ export default async function ProductPage({ params }: Props) {
             { label: product.title },
           ]}
         />
-        <ProductDetail product={product} />
+        <ProductDetail product={product} categoryLabel={categoryLabel} />
       </main>
       <Footer />
     </>

@@ -3,9 +3,7 @@ import { decrypt } from "@/lib/session";
 
 const SESSION_COOKIE = "bb_session";
 
-// Routes that require authentication
-const protectedRoutes = ["/account"];
-// Routes that should redirect logged-in users
+const protectedRoutes = ["/account", "/admin"];
 const authRoutes = ["/sign-in", "/sign-up", "/forgot-password"];
 
 export async function middleware(request: NextRequest) {
@@ -15,7 +13,6 @@ export async function middleware(request: NextRequest) {
   const session = await decrypt(sessionToken);
   const isLoggedIn = !!session;
 
-  // Protect /account/* routes
   const isProtected = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
@@ -27,9 +24,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect logged-in users away from auth pages
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
   if (isAuthRoute && isLoggedIn) {
+    const redirectTo = request.nextUrl.searchParams.get("redirect");
+    if (redirectTo?.startsWith("/")) {
+      return NextResponse.redirect(new URL(redirectTo, request.url));
+    }
     return NextResponse.redirect(new URL("/account", request.url));
   }
 
@@ -38,7 +38,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all except static files, api routes, _next internals
     "/((?!_next/static|_next/image|favicon.ico|images|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

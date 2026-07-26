@@ -1,7 +1,11 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { contactInfo } from "@/lib/site-data";
+import { toast } from "sonner";
+import { submitContactMessage } from "@/app/actions/admin";
+import { ButtonSpinner } from "@/components/site/button-spinner";
+import { useAppSelector } from "@/store/hooks";
+import { selectSiteContent } from "@/store/site-content-slice";
 
 type FormState = {
   name: string;
@@ -12,31 +16,53 @@ type FormState = {
 const emptyForm: FormState = { name: "", email: "", message: "" };
 
 export function ContactSection() {
+  const contactInfo = useAppSelector(selectSiteContent).contact;
   const [form, setForm] = useState<FormState>(emptyForm);
   const [status, setStatus] = useState<"idle" | "sent" | "error">("idle");
+  const [submitting, setSubmitting] = useState(false);
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
       setStatus("error");
       return;
     }
+
+    setSubmitting(true);
+    const fd = new FormData();
+    fd.set("name", form.name);
+    fd.set("email", form.email);
+    fd.set("message", form.message);
+    fd.set("website", String(new FormData(e.currentTarget).get("website") ?? ""));
+
+    const result = await submitContactMessage(undefined, fd);
+    setSubmitting(false);
+
+    if (!result.success) {
+      setStatus("error");
+      toast.error(result.message);
+      return;
+    }
+
     setStatus("sent");
+    toast.success(result.message);
     setForm(emptyForm);
   }
 
   return (
     <>
-      <section aria-label="Store map" className="w-full">
-        <iframe
-          title={contactInfo.mapTitle}
-          src={contactInfo.mapSrc}
-          className="block h-[530px] w-full border-0 max-[880px]:h-[360px] max-[767px]:h-[280px]"
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-          allowFullScreen
-        />
-      </section>
+      {contactInfo.mapEnabled && contactInfo.mapEmbedUrl ? (
+        <section aria-label="Store map" className="w-full">
+          <iframe
+            title={contactInfo.mapTitle}
+            src={contactInfo.mapEmbedUrl}
+            className="block h-[530px] w-full border-0 max-[880px]:h-[360px] max-[767px]:h-[280px]"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
+          />
+        </section>
+      ) : null}
 
       <section
         className="my-[80px] max-[880px]:my-[50px]"
@@ -59,6 +85,18 @@ export function ContactSection() {
                 className="mt-6"
                 aria-label="Contact form"
               >
+                <label
+                  aria-hidden="true"
+                  className="absolute -left-[9999px] size-px overflow-hidden"
+                >
+                  Website
+                  <input
+                    type="text"
+                    name="website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                </label>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <label className="block">
                     <span className="sr-only">Your name</span>
@@ -112,9 +150,17 @@ export function ContactSection() {
 
                 <button
                   type="submit"
-                  className="mt-5 rounded-[40px] bg-gradient-to-b from-salmon-soft to-[#f7baad] px-[25px] py-3 font-poppins text-[16px] font-semibold uppercase leading-6 text-white transition-opacity hover:opacity-90"
+                  disabled={submitting}
+                  className="mt-5 inline-flex cursor-pointer items-center justify-center gap-2 rounded-[40px] bg-gradient-to-b from-salmon-soft to-[#f7baad] px-[25px] py-3 font-poppins text-[16px] font-semibold uppercase leading-6 text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Submit
+                  {submitting ? (
+                    <>
+                      <ButtonSpinner />
+                      Sending…
+                    </>
+                  ) : (
+                    "Submit"
+                  )}
                 </button>
 
                 <div className="mt-3 min-h-[24px]" aria-live="polite">
@@ -139,7 +185,7 @@ export function ContactSection() {
                   Store Location
                 </h2>
                 <ul className="mt-4 space-y-2 font-poppins text-[14px] leading-6 text-body">
-                  {contactInfo.stores.map((store) => (
+                  {contactInfo.locations.map((store) => (
                     <li key={store}>{store}</li>
                   ))}
                 </ul>
@@ -150,7 +196,8 @@ export function ContactSection() {
                   Contact
                 </h2>
                 <ul className="mt-4 space-y-2 font-poppins text-[14px] leading-6 text-body">
-                  <li>
+                  {contactInfo.phone && (
+                    <li>
                     Mobile:{" "}
                     <a
                       href={`tel:${contactInfo.phone}`}
@@ -158,8 +205,10 @@ export function ContactSection() {
                     >
                       {contactInfo.phone}
                     </a>
-                  </li>
-                  <li>
+                  </li> )}
+                  {contactInfo.hotline && (
+                    <>
+                    <li>
                     Hotline:{" "}
                     <a
                       href={`tel:${contactInfo.hotline}`}
@@ -167,16 +216,18 @@ export function ContactSection() {
                     >
                       {contactInfo.hotline}
                     </a>
-                  </li>
-                  <li>
+                  </li> </> )}  
+                  {contactInfo.email && (
+                    <li> 
                     Email:{" "}
                     <a
                       href={`mailto:${contactInfo.email}`}
                       className="transition-colors hover:text-salmon"
                     >
-                      {contactInfo.email}
-                    </a>
-                  </li>
+                        {contactInfo.email}
+                      </a>
+                    </li>
+                  )}
                 </ul>
               </div>
 

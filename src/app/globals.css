@@ -24,6 +24,10 @@
 }
 
 @layer base {
+  html {
+    overflow-x: clip;
+  }
+
   body {
     background-color: #ffffff;
     color: var(--color-body);
@@ -31,6 +35,15 @@
     font-size: 14px;
     line-height: 24px;
     letter-spacing: 0.035px;
+    overflow-x: clip;
+    min-width: 0;
+  }
+
+  img,
+  video,
+  svg {
+    max-width: 100%;
+    height: auto;
   }
 
   h1,
@@ -41,6 +54,7 @@
   h6 {
     font-family: var(--font-fredoka);
     color: var(--color-ink);
+    overflow-wrap: anywhere;
   }
 
   button:not(:disabled),
@@ -74,7 +88,12 @@
   width: 100%;
   max-width: var(--spacing-shell);
   margin-inline: auto;
-  padding-inline: 15px;
+  padding-inline: 16px;
+  min-width: 0;
+
+  @media (width >= 640px) {
+    padding-inline: 20px;
+  }
 
   /* Above 1200px the reference adds its 45px container gutter on top of the
      15px column padding, leaving a 1440px content column at full width. */

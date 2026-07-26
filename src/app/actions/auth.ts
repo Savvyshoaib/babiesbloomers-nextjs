@@ -121,6 +121,7 @@ export async function signIn(
 ): Promise<ApiResponse> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const redirectTo = String(formData.get("redirect") ?? "").trim();
 
   if (!email || !password) {
     return fail("Email and password are required.");
@@ -137,7 +138,37 @@ export async function signIn(
   }
 
   await createSession(data.user.id, email);
-  redirect("/account");
+
+  // Route admins to admin panel when appropriate
+  let destination = "/account";
+  if (redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
+    destination = redirectTo;
+  } else {
+    try {
+      const admin = createAdminClient();
+      const bootstrap = process.env.ADMIN_BOOTSTRAP_EMAIL?.trim().toLowerCase();
+      if (bootstrap && email === bootstrap) {
+        await admin
+          .from("profiles")
+          .update({ role: "admin", email })
+          .eq("id", data.user.id);
+        destination = "/admin";
+      } else {
+        const { data: profile } = await admin
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
+          .maybeSingle();
+        if (profile?.role === "admin" || profile?.role === "shop_manager") {
+          destination = "/admin";
+        }
+      }
+    } catch {
+      // keep /account
+    }
+  }
+
+  redirect(destination);
 }
 
 // ─────────────────────────────────────────────────────────────

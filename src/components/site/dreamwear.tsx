@@ -41,14 +41,14 @@ export function Dreamwear() {
               comfort.
             </p>
 
-            <ul className="mt-[40px] grid gap-5 sm:grid-cols-2">
+            <ul className="mt-[28px] grid gap-3 sm:mt-[40px] sm:gap-5 sm:grid-cols-2">
               {dreamwearFeatures.map((feature) => (
                 <li
                   key={feature}
-                  className="flex items-center gap-3 rounded-[10px] bg-white py-[25px] pl-5 pr-[30px] shadow-[0_1px_18px_0_rgba(0,0,0,0.12)]"
+                  className="flex items-center gap-3 rounded-[10px] bg-white px-4 py-4 shadow-[0_1px_18px_0_rgba(0,0,0,0.12)] sm:py-[25px] sm:pl-5 sm:pr-[30px]"
                 >
-                  <CheckBadgeIcon className="size-[33px] shrink-0 text-pink" />
-                  <span className="font-poppins text-[18px] font-medium leading-[40px] text-body lg:text-[22px]">
+                  <CheckBadgeIcon className="size-7 shrink-0 text-pink sm:size-[33px]" />
+                  <span className="font-poppins text-[15px] font-medium leading-6 text-body sm:text-[18px] sm:leading-7 lg:text-[22px]">
                     {feature}
                   </span>
                 </li>

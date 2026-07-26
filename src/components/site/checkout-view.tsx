@@ -247,13 +247,13 @@ export function CheckoutView() {
     });
 
     if (checkoutResultType === "existing_account") {
-      toast.success("Order placed. Please check your order in your account.");
+      toast.success("Order confirmed. Check your order in your account.");
     } else if (checkoutResultType === "new_account") {
       toast.success(
-        "Order placed! Check your email for login details and order confirmation.",
+        "Order confirmed! Check your email for login details and confirmation.",
       );
     } else {
-      toast.success(orderResult.message || "Order placed successfully.");
+      toast.success(orderResult.message || "Order confirmed.");
     }
 
     setSubmitting(false);
@@ -302,7 +302,7 @@ export function CheckoutView() {
         </div>
 
         <h1 className="font-fredoka text-[32px] font-semibold text-ink">
-          Order Placed!
+          Order Confirmed!
         </h1>
         <p className="mt-2 font-poppins text-[14px] text-body">
           Invoice #{result.invoiceNumber}
@@ -406,7 +406,7 @@ export function CheckoutView() {
 
           <form onSubmit={onSubmit} className="space-y-8">
             <section>
-              <div className="mb-3 flex items-baseline justify-between">
+              <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
                 <h2 className="font-poppins text-[18px] font-semibold text-ink">
                   Contact
                 </h2>

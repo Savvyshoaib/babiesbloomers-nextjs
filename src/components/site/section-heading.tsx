@@ -25,7 +25,7 @@ export function SectionHeading({
   return (
     <div className={`flex flex-col ${alignToItems[align]} ${className}`}>
       <h2
-        className={`font-fredoka font-medium text-ink text-[32px] leading-[38px] sm:text-[40px] sm:leading-[46px] lg:text-[48px] lg:leading-[52px] ${headingClassName}`}
+        className={`font-fredoka font-medium text-ink text-[28px] leading-[34px] sm:text-[40px] sm:leading-[46px] lg:text-[48px] lg:leading-[52px] ${headingClassName}`}
       >
         {children}
       </h2>
@@ -35,7 +35,7 @@ export function SectionHeading({
           alt=""
           width={208}
           height={15}
-          className="mt-[10px] h-[15px] w-[208px]"
+          className="mt-[10px] h-[12px] w-[160px] sm:h-[15px] sm:w-[208px]"
         />
       ) : null}
     </div>

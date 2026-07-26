@@ -1,7 +1,27 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/site-data";
 import { CompareIcon, EyeIcon, HeartIcon, StarIcon } from "./icons";
+import { useSavedProducts, type SavedProduct } from "@/lib/saved-products-context";
+
+type CardProduct = Product & { slug?: string; priceValue?: number };
+
+function productHref(product: CardProduct) {
+  return product.slug ? `/product/${product.slug}` : "/shop";
+}
+
+function toSaved(product: CardProduct): SavedProduct {
+  return {
+    slug: product.slug ?? product.title,
+    title: product.title,
+    image: product.image,
+    price: product.price,
+    oldPrice: product.oldPrice,
+    priceValue: product.priceValue,
+  };
+}
 
 /** Matches the reference's 90x13 star strip inside a 24px tall row. */
 function EmptyStars({ className = "" }: { className?: string }) {
@@ -19,10 +39,15 @@ function EmptyStars({ className = "" }: { className?: string }) {
 }
 
 /** New Arrivals variant: centred copy over a soft grey square thumbnail. */
-export function ArrivalCard({ product }: { product: Product }) {
+export function ArrivalCard({ product }: { product: CardProduct }) {
+  const href = productHref(product);
+
   return (
     <article>
-      <div className="relative aspect-square overflow-hidden rounded-[15px] bg-thumb">
+      <Link
+        href={href}
+        className="relative block aspect-square overflow-hidden rounded-[15px] bg-thumb"
+      >
         {product.badge ? (
           <span className="absolute left-[15px] top-[15px] z-10 rounded-[20px] bg-amber px-2 text-[12px] font-semibold uppercase leading-[26px] text-white">
             {product.badge}
@@ -36,22 +61,20 @@ export function ArrivalCard({ product }: { product: Product }) {
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 264px"
           className="size-full object-cover transition-transform duration-500 hover:scale-105"
         />
-      </div>
+      </Link>
 
       <div className="px-[10px] py-[15px] text-center">
         <EmptyStars className="justify-center" />
-        {/* The reference clips titles to two lines on phones and to one line on
-            laptops, but lets them wrap freely on tablets and wide desktops. */}
-        <h3 className="mb-[5px] mt-[3px] h-[44px] overflow-hidden font-poppins text-[14px] font-medium capitalize leading-[22px] text-[#131a2a] min-[577px]:h-auto min-[577px]:overflow-visible min-[577px]:text-[16px] min-[577px]:leading-6 min-[1025px]:max-h-[26px] min-[1025px]:overflow-hidden min-[1367px]:max-h-none min-[1367px]:overflow-visible">
-          <Link href="/shop" className="transition-colors hover:text-salmon">
+        <h3 className="mb-[5px] mt-[3px] max-h-[44px] overflow-hidden font-poppins text-[13px] font-medium capitalize leading-[20px] text-[#131a2a] sm:text-[14px] sm:leading-[22px] min-[577px]:h-auto min-[577px]:max-h-none min-[577px]:overflow-visible min-[577px]:text-[16px] min-[577px]:leading-6 min-[1025px]:max-h-[26px] min-[1025px]:overflow-hidden min-[1367px]:max-h-none min-[1367px]:overflow-visible">
+          <Link href={href} className="transition-colors hover:text-salmon">
             {product.title}
           </Link>
         </h3>
-        <p className="flex flex-wrap items-baseline justify-center gap-x-[6px]">
-          <del className="text-[16px] font-normal leading-6 text-body">
+        <p className="flex flex-wrap items-baseline justify-center gap-x-1 gap-y-0.5">
+          <del className="text-[13px] font-normal leading-5 text-body sm:text-[16px] sm:leading-6">
             {product.oldPrice}
           </del>
-          <span className="text-[20px] font-medium leading-[26px] text-[#131a2a]">
+          <span className="text-[15px] font-medium leading-5 text-[#131a2a] sm:text-[20px] sm:leading-[26px]">
             {product.price}
           </span>
         </p>
@@ -69,6 +92,11 @@ export function ShopCard({
   href?: string;
 }) {
   const productHref = product.slug ? `/product/${product.slug}` : href;
+  const { isWishlisted, isCompared, toggleWishlist, toggleCompare } =
+    useSavedProducts();
+  const saved = toSaved(product);
+  const wishlisted = isWishlisted(saved.slug);
+  const compared = isCompared(saved.slug);
 
   return (
     <article className="group">
@@ -79,17 +107,19 @@ export function ShopCard({
           </span>
         ) : null}
 
-        <Image
-          src={product.image}
-          alt={product.title}
-          width={400}
-          height={400}
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 336px"
-          className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+        <Link href={productHref} aria-label={product.title} className="block size-full">
+          <Image
+            src={product.image}
+            alt={product.title}
+            width={400}
+            height={400}
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 336px"
+            className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        </Link>
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center opacity-0 transition-opacity duration-300 group-hover:pointer-events-auto group-hover:opacity-100">
-          <div className="flex items-center gap-2 rounded-full bg-white p-1.5 shadow-[0_4px_18px_rgba(0,0,0,0.12)]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center opacity-100 transition-opacity duration-300 lg:opacity-0 lg:group-hover:pointer-events-auto lg:group-hover:opacity-100">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white p-1.5 shadow-[0_4px_18px_rgba(0,0,0,0.12)]">
             <Link
               href={productHref}
               aria-label={`Quick view ${product.title}`}
@@ -97,20 +127,32 @@ export function ShopCard({
             >
               <EyeIcon className="size-[18px]" />
             </Link>
-            <Link
-              href="/wishlist"
-              aria-label={`Add ${product.title} to wishlist`}
-              className="flex size-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-salmon hover:text-white"
+            <button
+              type="button"
+              onClick={() => toggleWishlist(saved)}
+              aria-label={`${wishlisted ? "Remove" : "Add"} ${product.title} ${wishlisted ? "from" : "to"} wishlist`}
+              aria-pressed={wishlisted}
+              className={`flex size-10 cursor-pointer items-center justify-center rounded-full transition-colors ${
+                wishlisted
+                  ? "bg-salmon text-white"
+                  : "text-ink hover:bg-salmon hover:text-white"
+              }`}
             >
               <HeartIcon className="size-[18px]" />
-            </Link>
-            <Link
-              href="/compare"
-              aria-label={`Compare ${product.title}`}
-              className="flex size-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-salmon hover:text-white"
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleCompare(saved)}
+              aria-label={`${compared ? "Remove" : "Add"} ${product.title} ${compared ? "from" : "to"} compare`}
+              aria-pressed={compared}
+              className={`flex size-10 cursor-pointer items-center justify-center rounded-full transition-colors ${
+                compared
+                  ? "bg-salmon text-white"
+                  : "text-ink hover:bg-salmon hover:text-white"
+              }`}
             >
               <CompareIcon className="size-[18px]" />
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -132,10 +174,15 @@ export function ShopCard({
 }
 
 /** Top Picks variant: white card, left-aligned copy, pink sale price. */
-export function PickCard({ product }: { product: Product }) {
+export function PickCard({ product }: { product: CardProduct }) {
+  const href = productHref(product);
+
   return (
     <article className="overflow-hidden rounded-[12px] bg-white p-[2px]">
-      <div className="relative aspect-square overflow-hidden rounded-[10px]">
+      <Link
+        href={href}
+        className="relative block aspect-square overflow-hidden rounded-[10px]"
+      >
         {product.badge ? (
           <span className="absolute left-[10px] top-[10px] z-10 rounded-[11px_12px_12px_0] bg-amber px-[15px] text-[12px] font-semibold uppercase leading-[30px] text-white">
             {product.badge}
@@ -149,11 +196,11 @@ export function PickCard({ product }: { product: Product }) {
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 271px"
           className="size-full object-cover transition-transform duration-500 hover:scale-105"
         />
-      </div>
+      </Link>
 
       <div className="px-3 pb-4 pt-2">
         <h3 className="mb-[5px] font-poppins text-[16px] font-medium capitalize leading-6 text-steel">
-          <Link href="/shop" className="transition-colors hover:text-salmon">
+          <Link href={href} className="transition-colors hover:text-salmon">
             {product.title}
           </Link>
         </h3>

@@ -194,7 +194,7 @@ export async function sendOrderConfirmationEmail(
     `
     <h1 style="margin:0 0 12px;font-family:Georgia,serif;font-size:24px;color:#121b28;">Order confirmed</h1>
     <p style="margin:0 0 16px;font-size:14px;line-height:22px;">
-      Hi ${escapeHtml(name)}, thank you for shopping with Babies Bloomers. Your order has been placed successfully.
+      Hi ${escapeHtml(name)}, thank you for shopping with Babies Bloomers. Your order is confirmed.
     </p>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#faf9f7;border-radius:12px;margin:0 0 20px;">
       <tr>
@@ -238,6 +238,118 @@ export async function sendOrderConfirmationEmail(
   return sendMail({
     to: payload.to,
     subject: `Order confirmed — ${payload.invoiceNumber}`,
+    html,
+  });
+}
+
+const STATUS_COPY: Record<
+  string,
+  { title: string; body: string; subject: string }
+> = {
+  pending: {
+    title: "Order pending",
+    subject: "Order update: Pending",
+    body: "Your order is pending. We will start preparing it shortly.",
+  },
+  processing: {
+    title: "Order processing",
+    subject: "Order update: Processing",
+    body: "Good news — your order is now being processed and prepared for shipment.",
+  },
+  shipped: {
+    title: "Order shipped",
+    subject: "Order update: Shipped",
+    body: "Your order is on the way! It has been shipped and should arrive soon.",
+  },
+  delivered: {
+    title: "Order delivered",
+    subject: "Order update: Delivered",
+    body: "Your order has been delivered. We hope your little one loves it!",
+  },
+  cancelled: {
+    title: "Order cancelled",
+    subject: "Order update: Cancelled",
+    body: "Your order has been cancelled. If this was unexpected, please contact support.",
+  },
+};
+
+export type OrderStatusEmailPayload = {
+  to: string;
+  firstName: string;
+  invoiceNumber: string;
+  status: string;
+};
+
+export async function sendOrderStatusEmail(
+  payload: OrderStatusEmailPayload,
+): Promise<{ ok: boolean; error?: string }> {
+  const ordersUrl = `${siteUrl()}/account/orders`;
+  const name = payload.firstName || "there";
+  const copy =
+    STATUS_COPY[payload.status] ??
+    ({
+      title: "Order update",
+      subject: `Order update: ${payload.status}`,
+      body: `Your order status is now: ${payload.status}.`,
+    } as const);
+
+  const html = emailShell(
+    `${copy.title} — ${payload.invoiceNumber}`,
+    `
+    <h1 style="margin:0 0 12px;font-family:Georgia,serif;font-size:24px;color:#121b28;">${escapeHtml(copy.title)}</h1>
+    <p style="margin:0 0 16px;font-size:14px;line-height:22px;">
+      Hi ${escapeHtml(name)}, ${escapeHtml(copy.body)}
+    </p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#faf9f7;border-radius:12px;margin:0 0 20px;">
+      <tr>
+        <td style="padding:16px 18px;">
+          <p style="margin:0 0 6px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#999;">Invoice</p>
+          <p style="margin:0;font-size:18px;font-weight:700;color:#121b28;">#${escapeHtml(payload.invoiceNumber)}</p>
+          <p style="margin:8px 0 0;font-size:13px;color:#727272;">
+            Status:
+            <strong style="color:#121b28;text-transform:uppercase;">${escapeHtml(payload.status)}</strong>
+          </p>
+        </td>
+      </tr>
+    </table>
+    <a href="${ordersUrl}" style="display:inline-block;background:#f3aa9b;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 22px;border-radius:999px;">
+      Track your order
+    </a>
+    `,
+  );
+
+  return sendMail({
+    to: payload.to,
+    subject: `${copy.subject} — ${payload.invoiceNumber}`,
+    html,
+  });
+}
+
+export async function sendContactReplyEmail(payload: {
+  to: string;
+  name: string;
+  subject: string;
+  message: string;
+  originalMessage: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const html = emailShell(
+    payload.subject,
+    `
+    <h1 style="margin:0 0 12px;font-family:Georgia,serif;font-size:24px;color:#121b28;">${escapeHtml(payload.subject)}</h1>
+    <p style="margin:0 0 16px;font-size:14px;line-height:22px;">
+      Hi ${escapeHtml(payload.name || "there")},
+    </p>
+    <div style="margin:0 0 22px;font-size:14px;line-height:22px;color:#121b28;white-space:pre-wrap;">${escapeHtml(payload.message)}</div>
+    <div style="border-left:3px solid #f3aa9b;background:#faf9f7;padding:14px 16px;border-radius:0 10px 10px 0;">
+      <p style="margin:0 0 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#999;">Your original message</p>
+      <p style="margin:0;font-size:12px;line-height:19px;color:#727272;white-space:pre-wrap;">${escapeHtml(payload.originalMessage)}</p>
+    </div>
+    `,
+  );
+
+  return sendMail({
+    to: payload.to,
+    subject: payload.subject,
     html,
   });
 }

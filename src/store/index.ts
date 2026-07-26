@@ -1,9 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./auth-slice";
+import catalogReducer from "./catalog-slice";
+import siteContentReducer from "./site-content-slice";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    catalog: catalogReducer,
+    siteContent: siteContentReducer,
   },
 });
 

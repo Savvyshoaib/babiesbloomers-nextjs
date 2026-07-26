@@ -1,6 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { footerLinks } from "@/lib/site-data";
+import { useAppSelector } from "@/store/hooks";
+import { selectSiteContent } from "@/store/site-content-slice";
 import {
   FacebookIcon,
   InstagramIcon,
@@ -10,18 +14,21 @@ import {
   TwitterIcon,
 } from "./icons";
 
-const socials = [
-  { label: "Facebook", href: "https://facebook.com", Icon: FacebookIcon },
-  { label: "Instagram", href: "https://instagram.com", Icon: InstagramIcon },
-  { label: "Pinterest", href: "https://pinterest.com", Icon: PinterestIcon },
-  { label: "Twitter", href: "https://twitter.com", Icon: TwitterIcon },
-];
+const socialIcons = {
+  facebook: FacebookIcon,
+  instagram: InstagramIcon,
+  pinterest: PinterestIcon,
+  twitter: TwitterIcon,
+} as const;
 
 /**
  * The footer artwork supplies both the wave cut-out and the dark fill, so the
  * element must stay transparent — a background colour would fill the wave.
  */
 export function Footer() {
+  const { branding, socialLinks } = useAppSelector(selectSiteContent);
+  const socials = socialLinks.filter((s) => s.enabled && s.href);
+
   return (
     <footer
       className="mt-auto bg-auto bg-top bg-no-repeat pt-[70px] max-[1200px]:pt-[50px] max-[880px]:bg-cover max-[767px]:pt-[30px] min-[1921px]:bg-[length:100%_auto]"
@@ -31,11 +38,12 @@ export function Footer() {
         <div className="flex flex-col items-center">
           <Link href="/" aria-label="Babies Bloomers home">
             <Image
-              src="/images/footer-logo.png"
+              src={branding.footerLogo}
               alt="Babies Bloomers"
               width={251}
               height={183}
-              className="h-[126px] w-auto"
+              className="h-[100px] w-auto sm:h-[126px]"
+              unoptimized={branding.footerLogo.startsWith("http")}
             />
           </Link>
 
@@ -43,8 +51,8 @@ export function Footer() {
             Sign up to get the latest on sales, new releases and more
           </p>
 
-          <nav aria-label="Footer" className="mt-[40px] lg:mt-[65px]">
-            <ul className="flex flex-wrap items-center justify-center gap-x-[26px] gap-y-3">
+          <nav aria-label="Footer" className="mt-[32px] lg:mt-[65px]">
+            <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:gap-x-[26px] sm:gap-y-3">
               <li aria-hidden="true" className="hidden lg:block">
                 <Image src="/images/line.png" alt="" width={48} height={6} />
               </li>
@@ -52,7 +60,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="font-poppins text-[20px] font-semibold uppercase leading-[30px] text-body transition-colors hover:text-salmon"
+                    className="font-poppins text-[14px] font-semibold uppercase leading-6 text-body transition-colors hover:text-salmon sm:text-[18px] sm:leading-[30px] lg:text-[20px]"
                   >
                     {link.label}
                   </Link>
@@ -65,24 +73,26 @@ export function Footer() {
           </nav>
 
           <ul className="mt-[40px] flex items-center justify-center gap-[15px]">
-            {socials.map(({ label, href, Icon }) => (
-              <li key={label}>
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  aria-label={label}
-                  className="flex size-10 items-center justify-center rounded-full bg-white text-pink-deep transition-transform hover:-translate-y-0.5"
-                >
-                  <Icon className="size-5" />
-                </a>
-              </li>
-            ))}
+            {socials.map(({ network, href }) => {
+              const Icon = socialIcons[network];
+              return (
+                <li key={network}>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    aria-label={network}
+                    className="flex size-10 items-center justify-center rounded-full bg-white text-pink-deep transition-transform hover:-translate-y-0.5"
+                  >
+                    <Icon className="size-5" />
+                  </a>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>
 
-      {/* The rule spans the full 1470px container, 15px wider than the content. */}
       <div className="mx-auto w-full max-w-[1560px] px-[15px] lg:px-[45px]">
         <div className="mt-[40px] border-t-2 border-dotted border-[#d6d6d6]/40 py-[20px]">
           <div className="flex flex-col items-center gap-3 text-center font-poppins text-[14px] leading-6 text-body lg:flex-row lg:justify-between lg:text-left">
