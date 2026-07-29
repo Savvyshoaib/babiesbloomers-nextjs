@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { signOut } from "@/app/actions/auth";
 import {
+  CouponIcon,
   BoxIcon,
   CloseIcon,
   CodeIcon,
@@ -18,6 +19,7 @@ import {
   PackageIcon,
   SettingsIcon,
   ShieldIcon,
+  StarIcon,
   UsersIcon,
 } from "@/components/site/icons";
 import {
@@ -44,6 +46,8 @@ const ALL_NAV: NavItem[] = [
   { label: "Categories", href: "/admin/categories", icon: FolderIcon, permission: "categories" },
   { label: "Contact Queries", href: "/admin/messages", icon: MessageIcon, permission: "messages" },
   { label: "Content", href: "/admin/content", icon: ImageIcon, permission: "content" },
+  { label: "Coupons", href: "/admin/coupons", icon: CouponIcon, permission: "coupons" },
+  { label: "Reviews", href: "/admin/reviews", icon: StarIcon, permission: "reviews" },
   { label: "Scripts", href: "/admin/scripts", icon: CodeIcon, permission: "scripts" },
   { label: "Roles & Access", href: "/admin/roles", icon: ShieldIcon, permission: "roles" },
   { label: "Settings", href: "/admin/settings", icon: SettingsIcon, permission: "settings" },

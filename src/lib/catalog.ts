@@ -40,6 +40,7 @@ type DbProduct = {
   description?: string | null;
   additional_info?: CatalogAdditionalInfo | null;
   reviews_count?: number | null;
+  average_rating?: number | null;
 };
 
 export function mapDbProduct(row: DbProduct): CatalogProduct {
@@ -74,6 +75,7 @@ export function mapDbProduct(row: DbProduct): CatalogProduct {
       origin: "Pakistan",
     },
     reviewsCount: row.reviews_count ?? 0,
+    averageRating: Number(row.average_rating) || 0,
   };
 }
 
@@ -104,6 +106,7 @@ function mapStaticProduct(p: ShopProduct, index: number): CatalogProduct {
       origin: "Pakistan",
     },
     reviewsCount: 0,
+    averageRating: 0,
   };
 }
 

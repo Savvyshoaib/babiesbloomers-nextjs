@@ -15,8 +15,8 @@ export default async function AdminSettingsPage() {
           Store settings
         </h1>
         <p className="mt-1 font-poppins text-[14px] text-body">
-          Shipping fee and promotional strip. Contact page content is under
-          Content.
+          Shipping, payment methods, bank details, custom checkout sections, and
+          promo strip. Coupons are under Coupons.
         </p>
       </div>
       <SettingsForms settings={settings} />

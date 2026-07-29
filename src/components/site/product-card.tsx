@@ -4,9 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/site-data";
 import { CompareIcon, EyeIcon, HeartIcon, StarIcon } from "./icons";
+import { RatingStars } from "./rating-stars";
 import { useSavedProducts, type SavedProduct } from "@/lib/saved-products-context";
 
-type CardProduct = Product & { slug?: string; priceValue?: number };
+type CardProduct = Product & {
+  slug?: string;
+  priceValue?: number;
+  averageRating?: number;
+  reviewsCount?: number;
+};
 
 function productHref(product: CardProduct) {
   return product.slug ? `/product/${product.slug}` : "/shop";
@@ -24,16 +30,20 @@ function toSaved(product: CardProduct): SavedProduct {
 }
 
 /** Matches the reference's 90x13 star strip inside a 24px tall row. */
-function EmptyStars({ className = "" }: { className?: string }) {
+function ProductRatingRow({
+  product,
+  className = "",
+}: {
+  product: CardProduct;
+  className?: string;
+}) {
   return (
-    <div
-      className={`flex h-[24px] items-center gap-[6px] text-[#d9d9d9] ${className}`}
-      role="img"
-      aria-label="No rating yet"
-    >
-      {Array.from({ length: 5 }, (_, i) => (
-        <StarIcon key={i} className="size-[13px]" />
-      ))}
+    <div className={`flex h-[24px] items-center ${className}`}>
+      <RatingStars
+        value={product.averageRating}
+        count={product.reviewsCount}
+        className={className.includes("justify-center") ? "justify-center" : ""}
+      />
     </div>
   );
 }
@@ -64,7 +74,7 @@ export function ArrivalCard({ product }: { product: CardProduct }) {
       </Link>
 
       <div className="px-[10px] py-[15px] text-center">
-        <EmptyStars className="justify-center" />
+        <ProductRatingRow product={product} className="justify-center" />
         <h3 className="mb-[5px] mt-[3px] max-h-[44px] overflow-hidden font-poppins text-[13px] font-medium capitalize leading-[20px] text-[#131a2a] sm:text-[14px] sm:leading-[22px] min-[577px]:h-auto min-[577px]:max-h-none min-[577px]:overflow-visible min-[577px]:text-[16px] min-[577px]:leading-6 min-[1025px]:max-h-[26px] min-[1025px]:overflow-hidden min-[1367px]:max-h-none min-[1367px]:overflow-visible">
           <Link href={href} className="transition-colors hover:text-salmon">
             {product.title}
@@ -88,7 +98,11 @@ export function ShopCard({
   product,
   href = "/shop",
 }: {
-  product: Product & { slug?: string };
+  product: Product & {
+    slug?: string;
+    averageRating?: number;
+    reviewsCount?: number;
+  };
   href?: string;
 }) {
   const productHref = product.slug ? `/product/${product.slug}` : href;
@@ -158,7 +172,7 @@ export function ShopCard({
       </div>
 
       <div className="px-[10px] py-[15px] text-center">
-        <EmptyStars className="justify-center" />
+        <ProductRatingRow product={product} className="justify-center" />
         <h3 className="mb-[5px] mt-[3px] font-poppins text-[16px] font-medium capitalize leading-6 text-[#111]">
           <Link href={productHref} className="transition-colors hover:text-salmon">
             {product.title}
@@ -205,12 +219,26 @@ export function PickCard({ product }: { product: CardProduct }) {
           </Link>
         </h3>
         <p className="flex items-center gap-[6px] text-[14px] leading-6 text-body">
-          <span>0</span>
-          <StarIcon className="size-[11px] text-[#d9d9d9]" />
+          <span>
+            {product.averageRating && product.averageRating > 0
+              ? product.averageRating.toFixed(1)
+              : "0"}
+          </span>
+          <StarIcon
+            className={`size-[11px] ${
+              product.averageRating && product.averageRating > 0
+                ? "text-amber"
+                : "text-[#d9d9d9]"
+            }`}
+          />
           <span aria-hidden="true" className="text-[#d9d9d9]">
             |
           </span>
-          <span>No review</span>
+          <span>
+            {product.reviewsCount && product.reviewsCount > 0
+              ? `${product.reviewsCount} review${product.reviewsCount === 1 ? "" : "s"}`
+              : "No review"}
+          </span>
         </p>
         <p className="flex flex-wrap items-baseline gap-x-[6px]">
           <del className="text-[14px] font-semibold leading-6 text-body">

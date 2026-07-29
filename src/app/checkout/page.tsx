@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { CheckoutView } from "@/components/site/checkout-view";
+import { Footer } from "@/components/site/footer";
+import { Header } from "@/components/site/header";
+import { PageBanner } from "@/components/site/page-banner";
 
 export const metadata: Metadata = {
   title: "Checkout – Babies Bloomers",
@@ -8,8 +11,20 @@ export const metadata: Metadata = {
 
 export default function CheckoutPage() {
   return (
-    <main>
-      <CheckoutView />
-    </main>
+    <>
+      <Header />
+      <main>
+        <PageBanner
+          title="Checkout"
+          crumbs={[
+            { label: "Home", href: "/" },
+            { label: "Cart", href: "/cart" },
+            { label: "Checkout" },
+          ]}
+        />
+        <CheckoutView />
+      </main>
+      <Footer />
+    </>
   );
 }

@@ -32,6 +32,7 @@ export type CatalogProduct = {
   description: string;
   additionalInfo: CatalogAdditionalInfo;
   reviewsCount: number;
+  averageRating: number;
 };
 
 export type CatalogCategory = {
@@ -81,6 +82,8 @@ export type ShopCardProduct = {
   slug: string;
   categories: string[];
   priceValue: number;
+  reviewsCount?: number;
+  averageRating?: number;
 };
 
 export function toShopProduct(p: CatalogProduct): ShopCardProduct {
@@ -93,5 +96,7 @@ export function toShopProduct(p: CatalogProduct): ShopCardProduct {
     slug: p.slug,
     categories: p.categories,
     priceValue: p.priceValue,
+    reviewsCount: p.reviewsCount,
+    averageRating: p.averageRating,
   };
 }

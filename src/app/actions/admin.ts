@@ -10,7 +10,7 @@ import {
   STANDARD_SHIPPING_FEE,
 } from "@/lib/site-data";
 import type { OrderStatus } from "@/app/actions/orders";
-import { sendContactReplyEmail, sendOrderStatusEmail } from "@/lib/email";
+import { sendContactReplyEmail, sendOrderStatusEmail, sendPasswordResetEmail, sendAdminSetPasswordEmail } from "@/lib/email";
 import {
   mergeSiteContent,
   validateSiteContact,
@@ -296,6 +296,250 @@ export async function updateCustomerRole(
   return ok(`Role updated to ${role.replace("_", " ")}.`);
 }
 
+function siteUrl() {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+    "http://localhost:3000"
+  );
+}
+
+function recoveryRedirect() {
+  return `${siteUrl()}/auth/callback?next=/update-password`;
+}
+
+function generateTempPassword() {
+  const chunk = () => Math.random().toString(36).slice(2, 6);
+  return `Bb${chunk()}${chunk().toUpperCase()}!${Math.floor(10 + Math.random() * 89)}`;
+}
+
+export async function updateAdminCustomerProfile(
+  _prev: ApiResponse | undefined,
+  formData: FormData,
+): Promise<ApiResponse> {
+  await requirePermission("customers");
+
+  const userId = String(formData.get("userId") ?? "").trim();
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  const firstName = String(formData.get("firstName") ?? "").trim();
+  const lastName = String(formData.get("lastName") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+
+  if (!userId) return fail("Customer id is required.");
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return fail("A valid email is required.");
+  }
+  if (!firstName) return fail("First name is required.");
+
+  const admin = createAdminClient();
+
+  const { error: authError } = await admin.auth.admin.updateUserById(userId, {
+    email,
+    user_metadata: {
+      full_name: `${firstName} ${lastName}`.trim(),
+    },
+  });
+
+  if (authError) {
+    const msg = authError.message?.toLowerCase() ?? "";
+    if (msg.includes("already") || msg.includes("exists") || msg.includes("registered")) {
+      return fail("Another account already uses this email.");
+    }
+    return fail("Could not update account email.", authError.message);
+  }
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({
+      email,
+      first_name: firstName,
+      last_name: lastName || null,
+      phone: phone || null,
+    })
+    .eq("id", userId);
+
+  if (profileError) {
+    return fail("Could not update profile.", profileError.message);
+  }
+
+  revalidatePath("/admin/customers");
+  revalidatePath(`/admin/customers/${userId}`);
+  return ok("Customer profile updated.");
+}
+
+export async function updateAdminCustomerAddress(
+  _prev: ApiResponse | undefined,
+  formData: FormData,
+): Promise<ApiResponse> {
+  await requirePermission("customers");
+
+  const userId = String(formData.get("userId") ?? "").trim();
+  const addressId = String(formData.get("addressId") ?? "").trim();
+  const type = String(formData.get("type") ?? "shipping").trim() as
+    | "shipping"
+    | "billing";
+  const firstName = String(formData.get("firstName") ?? "").trim();
+  const lastName = String(formData.get("lastName") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+  const city = String(formData.get("city") ?? "").trim();
+  const postal = String(formData.get("postal") ?? "").trim();
+  const country = String(formData.get("country") ?? "Pakistan").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+
+  if (!userId) return fail("Customer id is required.");
+  if (type !== "shipping" && type !== "billing") {
+    return fail("Invalid address type.");
+  }
+  if (!firstName || !lastName || !address || !city || !phone) {
+    return fail("Please complete all required address fields.");
+  }
+
+  const admin = createAdminClient();
+  const row = {
+    user_id: userId,
+    type,
+    first_name: firstName,
+    last_name: lastName,
+    address,
+    city,
+    postal_code: postal,
+    country: country || "Pakistan",
+    phone,
+  };
+
+  if (addressId) {
+    const { error } = await admin.from("addresses").update(row).eq("id", addressId);
+    if (error) return fail("Could not update address.", error.message);
+  } else {
+    const { data: existing } = await admin
+      .from("addresses")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("type", type)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await admin
+        .from("addresses")
+        .update(row)
+        .eq("id", existing.id);
+      if (error) return fail("Could not update address.", error.message);
+    } else {
+      const { error } = await admin.from("addresses").insert(row);
+      if (error) return fail("Could not save address.", error.message);
+    }
+  }
+
+  revalidatePath(`/admin/customers/${userId}`);
+  return ok(`${type === "billing" ? "Billing" : "Shipping"} address saved.`);
+}
+
+export async function adminSendCustomerPasswordReset(
+  _prev: ApiResponse | undefined,
+  formData: FormData,
+): Promise<ApiResponse> {
+  await requirePermission("customers");
+
+  const userId = String(formData.get("userId") ?? "").trim();
+  if (!userId) return fail("Customer id is required.");
+
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("email, first_name")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const email = String(profile?.email ?? "").trim().toLowerCase();
+  if (!email) return fail("This customer has no email on file.");
+
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: {
+      redirectTo: recoveryRedirect(),
+    },
+  });
+
+  if (error || !data?.properties?.action_link) {
+    return fail(
+      "Could not generate password reset link.",
+      error?.message,
+    );
+  }
+
+  const mail = await sendPasswordResetEmail({
+    to: email,
+    resetUrl: data.properties.action_link,
+  });
+
+  if (!mail.ok) {
+    return fail("Could not send reset email.", mail.error);
+  }
+
+  revalidatePath(`/admin/customers/${userId}`);
+  return ok(`Password reset email sent to ${email}.`);
+}
+
+export async function adminSetCustomerPassword(
+  _prev: ApiResponse | undefined,
+  formData: FormData,
+): Promise<ApiResponse> {
+  await requirePermission("customers");
+
+  const userId = String(formData.get("userId") ?? "").trim();
+  let password = String(formData.get("password") ?? "").trim();
+  const sendEmail = formData.get("sendEmail") === "on";
+
+  if (!userId) return fail("Customer id is required.");
+  if (!password) {
+    password = generateTempPassword();
+  }
+  if (password.length < 8) {
+    return fail("Password must be at least 8 characters.");
+  }
+
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("email, first_name")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const email = String(profile?.email ?? "").trim().toLowerCase();
+  if (!email) return fail("This customer has no email on file.");
+
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    password,
+  });
+
+  if (error) {
+    return fail("Could not update password.", error.message);
+  }
+
+  if (sendEmail) {
+    const mail = await sendAdminSetPasswordEmail({
+      to: email,
+      firstName: profile?.first_name || undefined,
+      password,
+    });
+    if (!mail.ok) {
+      return fail(
+        "Password updated, but email failed to send.",
+        mail.error,
+      );
+    }
+    revalidatePath(`/admin/customers/${userId}`);
+    return ok(`Password updated and emailed to ${email}.`);
+  }
+
+  revalidatePath(`/admin/customers/${userId}`);
+  return ok(
+    `Password updated. New password: ${password} (copy now — it won’t be shown again).`,
+  );
+}
+
 export async function getAdminRolePermissions(): Promise<RolePermissionMap> {
   await requirePermission("roles");
   const admin = createAdminClient();
@@ -336,6 +580,8 @@ export async function saveRolePermissions(
     categories: false,
     messages: false,
     content: false,
+    coupons: false,
+    reviews: false,
     scripts: false,
     settings: false,
     roles: false,
@@ -629,6 +875,7 @@ export type AdminProduct = {
   exclusive_offers: { title: string; icon: string }[];
   additional_info: Record<string, string>;
   reviews_count: number;
+  average_rating?: number;
   created_at: string;
 };
 
@@ -998,6 +1245,8 @@ export async function updateSiteSetting(
   revalidatePath("/admin/settings");
   revalidatePath("/admin/scripts");
   revalidatePath("/admin/content");
+  revalidatePath("/checkout");
+  revalidatePath("/cart");
   revalidatePath("/");
   return ok("Settings saved.");
 }

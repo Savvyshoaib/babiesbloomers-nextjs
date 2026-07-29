@@ -168,46 +168,252 @@ export function SiteContentForms({ initial }: { initial: SiteContent }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Hero banner" description="Homepage top full-width banner.">
-        <ImageUploadField
-          label="Banner image"
-          value={content.hero.image}
-          onChange={(image) =>
-            setContent((c) => ({ ...c, hero: { ...c.hero, image } }))
-          }
-        />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block font-poppins text-[13px] font-medium text-ink">
-              Link URL
-            </label>
+      <SectionCard
+        title="Hero slider"
+        description="Homepage top banners. Upload multiple slides — they auto-rotate on the storefront."
+      >
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="flex items-center gap-2 font-poppins text-[13px] text-ink">
             <input
-              value={content.hero.href}
+              type="checkbox"
+              checked={content.hero.autoplay}
               onChange={(e) =>
                 setContent((c) => ({
                   ...c,
-                  hero: { ...c.hero, href: e.target.value },
+                  hero: { ...c.hero, autoplay: e.target.checked },
+                }))
+              }
+              className="size-4 accent-salmon"
+            />
+            Autoplay
+          </label>
+          <label className="flex items-center gap-2 font-poppins text-[13px] text-ink">
+            <input
+              type="checkbox"
+              checked={content.hero.showDots}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  hero: { ...c.hero, showDots: e.target.checked },
+                }))
+              }
+              className="size-4 accent-salmon"
+            />
+            Show dots
+          </label>
+          <label className="flex items-center gap-2 font-poppins text-[13px] text-ink">
+            <input
+              type="checkbox"
+              checked={content.hero.showArrows}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  hero: { ...c.hero, showArrows: e.target.checked },
+                }))
+              }
+              className="size-4 accent-salmon"
+            />
+            Show arrows
+          </label>
+          <div>
+            <label className="mb-1.5 block font-poppins text-[12px] font-medium text-ink">
+              Interval (ms)
+            </label>
+            <input
+              type="number"
+              min={2000}
+              step={500}
+              value={content.hero.intervalMs}
+              onChange={(e) =>
+                setContent((c) => ({
+                  ...c,
+                  hero: {
+                    ...c.hero,
+                    intervalMs: Number(e.target.value) || 5000,
+                  },
                 }))
               }
               className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
             />
           </div>
           <div>
-            <label className="mb-1.5 block font-poppins text-[13px] font-medium text-ink">
-              Alt text
+            <label className="mb-1.5 block font-poppins text-[12px] font-medium text-ink">
+              Effect
             </label>
-            <input
-              value={content.hero.alt}
+            <select
+              value={content.hero.effect}
               onChange={(e) =>
                 setContent((c) => ({
                   ...c,
-                  hero: { ...c.hero, alt: e.target.value },
+                  hero: {
+                    ...c.hero,
+                    effect: e.target.value as "fade" | "slide",
+                  },
                 }))
               }
               className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
-            />
+            >
+              <option value="fade">Fade</option>
+              <option value="slide">Slide</option>
+            </select>
           </div>
         </div>
+
+        <div className="space-y-4">
+          {(content.hero.slides?.length
+            ? content.hero.slides
+            : [
+                {
+                  id: "hero-1",
+                  image: content.hero.image,
+                  href: content.hero.href,
+                  alt: content.hero.alt,
+                },
+              ]
+          ).map((slide, index) => (
+            <div
+              key={slide.id}
+              className="space-y-3 rounded-xl border border-[#f0ece8] p-4"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-poppins text-[13px] font-semibold text-ink">
+                  Slide {index + 1}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setContent((c) => {
+                      const slides = [...(c.hero.slides ?? [])].filter(
+                        (_, i) => i !== index,
+                      );
+                      const next =
+                        slides.length > 0
+                          ? slides
+                          : [
+                              {
+                                id: "hero-1",
+                                image: "/images/banner.jpg",
+                                href: "/shop",
+                                alt: "Hero banner",
+                              },
+                            ];
+                      return {
+                        ...c,
+                        hero: {
+                          ...c.hero,
+                          slides: next,
+                          image: next[0]!.image,
+                          href: next[0]!.href,
+                          alt: next[0]!.alt,
+                        },
+                      };
+                    })
+                  }
+                  className="font-poppins text-[12px] text-red-600 hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+              <ImageUploadField
+                label="Banner image"
+                value={slide.image}
+                onChange={(image) =>
+                  setContent((c) => {
+                    const slides = [...(c.hero.slides ?? [])];
+                    if (!slides[index]) return c;
+                    slides[index] = { ...slides[index]!, image };
+                    return {
+                      ...c,
+                      hero: {
+                        ...c.hero,
+                        slides,
+                        image: slides[0]?.image ?? image,
+                      },
+                    };
+                  })
+                }
+              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <input
+                  value={slide.href}
+                  onChange={(e) =>
+                    setContent((c) => {
+                      const slides = [...(c.hero.slides ?? [])];
+                      if (!slides[index]) return c;
+                      slides[index] = {
+                        ...slides[index]!,
+                        href: e.target.value,
+                      };
+                      return {
+                        ...c,
+                        hero: {
+                          ...c.hero,
+                          slides,
+                          href: slides[0]?.href ?? e.target.value,
+                        },
+                      };
+                    })
+                  }
+                  placeholder="Link URL"
+                  className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+                />
+                <input
+                  value={slide.alt}
+                  onChange={(e) =>
+                    setContent((c) => {
+                      const slides = [...(c.hero.slides ?? [])];
+                      if (!slides[index]) return c;
+                      slides[index] = {
+                        ...slides[index]!,
+                        alt: e.target.value,
+                      };
+                      return {
+                        ...c,
+                        hero: {
+                          ...c.hero,
+                          slides,
+                          alt: slides[0]?.alt ?? e.target.value,
+                        },
+                      };
+                    })
+                  }
+                  placeholder="Alt text"
+                  className="h-10 w-full rounded-lg border border-[#cfcfcf] px-3 font-poppins text-[13px]"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            setContent((c) => {
+              const slides = [
+                ...(c.hero.slides?.length
+                  ? c.hero.slides
+                  : [
+                      {
+                        id: "hero-1",
+                        image: c.hero.image,
+                        href: c.hero.href,
+                        alt: c.hero.alt,
+                      },
+                    ]),
+                {
+                  id: `hero-${Date.now()}`,
+                  image: "/images/banner.jpg",
+                  href: "/shop",
+                  alt: "New hero banner",
+                },
+              ];
+              return { ...c, hero: { ...c.hero, slides } };
+            })
+          }
+          className="mt-4 h-10 rounded-lg border border-[#ddd] px-4 font-poppins text-[13px] font-semibold text-ink hover:border-salmon hover:text-salmon"
+        >
+          + Add slide
+        </button>
       </SectionCard>
 
       <SectionCard

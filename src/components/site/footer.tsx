@@ -35,9 +35,47 @@ export function Footer() {
 
   return (
     <footer
-      className="mt-auto bg-auto bg-top bg-no-repeat pt-[70px] max-[1200px]:pt-[50px] max-[880px]:bg-cover max-[767px]:pt-[30px] min-[1921px]:bg-[length:100%_auto]"
+      className="relative mt-[90px] bg-auto bg-top bg-no-repeat pt-[70px] max-[1200px]:pt-[50px] max-[880px]:bg-cover max-[767px]:pt-[30px] min-[1921px]:bg-[length:100%_auto]"
       style={{ backgroundImage: "url('/images/bg-footer.png')" }}
     >
+      <svg
+className="waves"
+xmlns="http://www.w3.org/2000/svg"
+viewBox="0 24 150 28"
+preserveAspectRatio="none">
+
+<defs>
+
+<path
+id="gentle-wave"
+d="M-160 44
+c30 0
+58-18 88-18
+s58 18 88 18
+58-18 88-18
+58 18 88 18
+v44h-352z"/>
+
+</defs>
+
+<g className="parallax1">
+<use href="#gentle-wave" x="48" y="0"></use>
+</g>
+
+<g className="parallax2">
+<use href="#gentle-wave" x="48" y="3"></use>
+</g>
+
+<g className="parallax3">
+<use href="#gentle-wave" x="48" y="6"></use>
+</g>
+
+<g className="parallax4">
+<use href="#gentle-wave" x="48" y="9"></use>
+</g>
+
+</svg>
+
       <div className="shell">
         <div className="flex flex-col items-center">
           <Link href="/" aria-label="Babies Bloomers home">

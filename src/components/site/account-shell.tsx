@@ -11,6 +11,7 @@ import {
   PackageIcon,
   ReceiptIcon,
   SettingsIcon,
+  StarIcon,
 } from "@/components/site/icons";
 
 type IconComponent = ComponentType<{ className?: string }>;
@@ -24,6 +25,7 @@ const navItems: {
 }[] = [
   { label: "Dashboard", short: "Home", href: "/account", icon: HomeIcon, exact: true },
   { label: "My Orders", short: "Orders", href: "/account/orders", icon: PackageIcon },
+  { label: "My Reviews", short: "Reviews", href: "/account/reviews", icon: StarIcon },
   { label: "Wishlist", short: "Wish", href: "/account/wishlist", icon: HeartIcon },
   { label: "Invoices", short: "Bills", href: "/account/invoices", icon: ReceiptIcon },
   { label: "Settings", short: "Settings", href: "/account/settings", icon: SettingsIcon },
@@ -116,7 +118,7 @@ export function AccountShell({
         aria-label="Account mobile navigation"
         className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#f0ece8] bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
-        <ul className="grid grid-cols-5">
+        <ul className="grid grid-cols-6">
           {navItems.map(({ short, href, icon: Icon, exact }) => {
             const active = isActive(pathname, href, exact);
             return (

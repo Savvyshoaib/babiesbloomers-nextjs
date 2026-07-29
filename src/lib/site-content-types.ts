@@ -6,10 +6,26 @@ export type SiteBranding = {
   favicon: string;
 };
 
-export type SiteHero = {
+export type SiteHeroSlide = {
+  id: string;
   image: string;
   href: string;
   alt: string;
+};
+
+export type SiteHeroEffect = "fade" | "slide";
+
+export type SiteHero = {
+  /** Legacy single-banner fields (kept for backward compatibility). */
+  image: string;
+  href: string;
+  alt: string;
+  slides: SiteHeroSlide[];
+  autoplay: boolean;
+  intervalMs: number;
+  effect: SiteHeroEffect;
+  showDots: boolean;
+  showArrows: boolean;
 };
 
 export type SitePromoBanner = {
@@ -110,6 +126,19 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     image: "/images/banner.jpg",
     href: "/shop",
     alt: "Flat 50% off on the entire website at Babies Bloomers",
+    slides: [
+      {
+        id: "hero-1",
+        image: "/images/banner.jpg",
+        href: "/shop",
+        alt: "Flat 50% off on the entire website at Babies Bloomers",
+      },
+    ],
+    autoplay: true,
+    intervalMs: 5000,
+    effect: "fade",
+    showDots: true,
+    showArrows: true,
   },
   promoBanners: [
     {
@@ -210,7 +239,7 @@ export function mergeSiteContent(partial: Partial<SiteContent> | null | undefine
 
   return {
     branding: { ...DEFAULT_SITE_CONTENT.branding, ...partial.branding },
-    hero: { ...DEFAULT_SITE_CONTENT.hero, ...partial.hero },
+    hero: mergeHero(partial.hero),
     promoBanners:
       partial.promoBanners?.length === 2
         ? partial.promoBanners
@@ -243,6 +272,58 @@ export function mergeSiteContent(partial: Partial<SiteContent> | null | undefine
       ),
       locations,
     },
+  };
+}
+
+function mergeHero(partial: Partial<SiteHero> | null | undefined): SiteHero {
+  const base = DEFAULT_SITE_CONTENT.hero;
+  if (!partial) return base;
+
+  const image = String(partial.image ?? base.image);
+  const href = String(partial.href ?? base.href);
+  const alt = String(partial.alt ?? base.alt);
+
+  let slides: SiteHeroSlide[] = [];
+  if (Array.isArray(partial.slides) && partial.slides.length > 0) {
+    slides = partial.slides
+      .map((row, index) => {
+        const r = row as Partial<SiteHeroSlide>;
+        return {
+          id:
+            String(r.id ?? "").trim() ||
+            `hero-${index}-${Math.random().toString(36).slice(2, 6)}`,
+          image: String(r.image ?? image).trim() || image,
+          href: String(r.href ?? href).trim() || href,
+          alt: String(r.alt ?? alt).trim() || alt,
+        };
+      })
+      .filter((s) => s.image)
+      .slice(0, 10);
+  }
+
+  if (slides.length === 0) {
+    slides = [{ id: "hero-1", image, href, alt }];
+  }
+
+  const intervalMs = Number(partial.intervalMs ?? base.intervalMs);
+  const effect =
+    partial.effect === "slide" || partial.effect === "fade"
+      ? partial.effect
+      : base.effect;
+
+  return {
+    image: slides[0]!.image,
+    href: slides[0]!.href,
+    alt: slides[0]!.alt,
+    slides,
+    autoplay: Boolean(partial.autoplay ?? base.autoplay),
+    intervalMs:
+      Number.isFinite(intervalMs) && intervalMs >= 2000
+        ? Math.min(20000, intervalMs)
+        : base.intervalMs,
+    effect,
+    showDots: Boolean(partial.showDots ?? base.showDots),
+    showArrows: Boolean(partial.showArrows ?? base.showArrows),
   };
 }
 

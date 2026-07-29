@@ -4,6 +4,11 @@ import { getAdminCustomer } from "@/app/actions/admin";
 import { formatPkrCheckout } from "@/lib/format";
 import { StatusBadge } from "@/components/admin/admin-forms";
 import { CustomerRoleForm } from "@/components/admin/customer-role-form";
+import {
+  CustomerAddressEditForm,
+  CustomerPasswordActions,
+  CustomerProfileEditForm,
+} from "@/components/admin/customer-detail-forms";
 import { DeleteCustomerButton } from "@/components/admin/delete-customer-button";
 import { requirePermission } from "@/lib/admin";
 import { ROLE_LABELS, type AppRole } from "@/lib/roles";
@@ -28,6 +33,13 @@ export default async function AdminCustomerDetailPage({
   const roleLabel =
     ROLE_LABELS[profile.role as AppRole] ?? String(profile.role);
 
+  const shipping = addresses.find(
+    (a: { type: string }) => a.type === "shipping",
+  );
+  const billing = addresses.find(
+    (a: { type: string }) => a.type === "billing",
+  );
+
   return (
     <div className="space-y-6 sm:space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -49,29 +61,21 @@ export default async function AdminCustomerDetailPage({
               {roleLabel}
             </span>
           </div>
+          <p className="mt-1 font-poppins text-[12px] text-body">
+            Joined {new Date(profile.created_at).toLocaleDateString("en-PK")}
+          </p>
         </div>
         {canDelete ? (
           <DeleteCustomerButton userId={profile.id} email={profile.email} />
         ) : null}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <div className="rounded-2xl border border-[#e8e2dc] bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-3 font-poppins text-[15px] font-semibold text-ink">
-            Profile
+          <h2 className="mb-4 font-poppins text-[15px] font-semibold text-ink">
+            Profile details
           </h2>
-          <dl className="space-y-2 font-poppins text-[13px]">
-            <div className="flex justify-between gap-4">
-              <dt className="text-body">Phone</dt>
-              <dd className="text-ink">{profile.phone || "—"}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-body">Joined</dt>
-              <dd className="text-ink">
-                {new Date(profile.created_at).toLocaleDateString("en-PK")}
-              </dd>
-            </div>
-          </dl>
+          <CustomerProfileEditForm profile={profile} />
           <div className="mt-5 border-t border-[#f0ece8] pt-4">
             <CustomerRoleForm
               userId={profile.id}
@@ -82,41 +86,36 @@ export default async function AdminCustomerDetailPage({
         </div>
 
         <div className="rounded-2xl border border-[#e8e2dc] bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-3 font-poppins text-[15px] font-semibold text-ink">
-            Addresses
+          <h2 className="mb-4 font-poppins text-[15px] font-semibold text-ink">
+            Password
           </h2>
-          {addresses.length === 0 ? (
-            <p className="font-poppins text-[13px] text-body">No saved addresses.</p>
-          ) : (
-            <ul className="space-y-4">
-              {addresses.map(
-                (a: {
-                  id: string;
-                  type: string;
-                  first_name: string | null;
-                  last_name: string | null;
-                  address: string | null;
-                  city: string | null;
-                  phone: string | null;
-                }) => (
-                  <li
-                    key={a.id}
-                    className="rounded-xl border border-[#f0ece8] p-3 font-poppins text-[13px] text-body"
-                  >
-                    <p className="mb-1 font-semibold uppercase text-ink">
-                      {a.type}
-                    </p>
-                    <p>
-                      {a.first_name} {a.last_name}
-                    </p>
-                    <p>{a.address}</p>
-                    <p>{a.city}</p>
-                    <p>{a.phone}</p>
-                  </li>
-                ),
-              )}
-            </ul>
-          )}
+          <CustomerPasswordActions
+            userId={profile.id}
+            email={profile.email}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <div className="rounded-2xl border border-[#e8e2dc] bg-white p-4 shadow-sm sm:p-5">
+          <h2 className="mb-4 font-poppins text-[15px] font-semibold text-ink">
+            Shipping address
+          </h2>
+          <CustomerAddressEditForm
+            userId={profile.id}
+            address={shipping ?? null}
+            type="shipping"
+          />
+        </div>
+        <div className="rounded-2xl border border-[#e8e2dc] bg-white p-4 shadow-sm sm:p-5">
+          <h2 className="mb-4 font-poppins text-[15px] font-semibold text-ink">
+            Billing address
+          </h2>
+          <CustomerAddressEditForm
+            userId={profile.id}
+            address={billing ?? null}
+            type="billing"
+          />
         </div>
       </div>
 

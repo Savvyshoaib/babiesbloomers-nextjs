@@ -20,6 +20,8 @@ export function TopPicks() {
         price: p.price,
         badge: p.badge,
         slug: p.slug as string | undefined,
+        averageRating: p.averageRating,
+        reviewsCount: p.reviewsCount,
       }));
     }
     return staticTopPicks.slice(0, TOP_PICKS_LIMIT).map((p) => ({

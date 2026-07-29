@@ -9,10 +9,9 @@ import {
   shopCategories as staticShopCategories,
   shopProducts as staticShopProducts,
   shopSortOptions,
-  type ShopProduct,
   type ShopSortValue,
 } from "@/lib/site-data";
-import { toShopProduct } from "@/lib/catalog-types";
+import { toShopProduct, type ShopCardProduct } from "@/lib/catalog-types";
 import { useAppSelector } from "@/store/hooks";
 import {
   selectActiveProducts,
@@ -33,7 +32,7 @@ import { ShopCard } from "./product-card";
 type ViewMode = "list" | "grid-2" | "grid-3" | "grid-5";
 
 type ShopViewProps = {
-  products?: ShopProduct[];
+  products?: ShopCardProduct[];
   source?: "all" | "new-arrivals";
   defaultView?: ViewMode;
   defaultSort?: ShopSortValue;
@@ -66,7 +65,7 @@ function SidebarWidget({
   );
 }
 
-function matchesCategory(product: ShopProduct, categorySlug: string) {
+function matchesCategory(product: ShopCardProduct, categorySlug: string) {
   const needle = categorySlug.toLowerCase();
   return product.categories.some((c) => c.toLowerCase() === needle);
 }
@@ -103,7 +102,11 @@ export function ShopView({
         ? staticShopProducts.filter((p) => p.badge === "new")
         : staticShopProducts;
 
-    return fallback;
+    return fallback.map((p) => ({
+      ...p,
+      averageRating: 0,
+      reviewsCount: 0,
+    }));
   }, [
     productsProp,
     source,
@@ -244,8 +247,12 @@ export function ShopView({
         }
         break;
       case "popularity":
+        sorted.sort((a, b) => (b.reviewsCount ?? 0) - (a.reviewsCount ?? 0));
+        break;
       case "rating":
-        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        sorted.sort(
+          (a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0),
+        );
         break;
       default:
         break;

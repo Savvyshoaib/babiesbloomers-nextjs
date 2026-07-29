@@ -149,6 +149,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                       Qty: <span className="font-medium text-ink">{item.quantity}</span> · Price:{" "}
                       <span className="font-medium text-ink">{formatPkrCheckout(item.unit_price)}</span>
                     </p>
+                    {order.status === "delivered" && item.product_slug ? (
+                      <Link
+                        href={`/account/reviews/write?product=${encodeURIComponent(item.product_slug)}&order=${encodeURIComponent(order.id)}&item=${encodeURIComponent(item.id)}`}
+                        className="mt-2 inline-flex h-8 items-center rounded-full bg-[#fff5f2] px-3 font-poppins text-[12px] font-semibold text-salmon transition-colors hover:bg-salmon hover:text-white"
+                      >
+                        Write a review
+                      </Link>
+                    ) : null}
                   </div>
                   <p className="shrink-0 font-poppins text-[14px] font-semibold text-ink">
                     {formatPkrCheckout(item.total_price)}

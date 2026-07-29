@@ -2,14 +2,40 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cart-context";
 import { formatPkr, formatPkrCheckout } from "@/lib/format";
-import { STANDARD_SHIPPING_FEE } from "@/lib/site-data";
+import {
+  mergeCheckoutSettings,
+  resolveShippingFee,
+} from "@/lib/checkout-settings";
+import { EmptyCartState } from "./empty-cart-state";
 import { MinusIcon, PlusIcon } from "./icons";
 
 export function CartPageView() {
   const { items, subtotal, removeItem, updateQuantity, ready } = useCart();
-  const shipping = items.length > 0 ? STANDARD_SHIPPING_FEE : 0;
+  const [shippingFee, setShippingFee] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/checkout-settings", { cache: "no-store" });
+        const json = await res.json();
+        if (cancelled) return;
+        const settings = mergeCheckoutSettings(json.data);
+        setShippingFee(resolveShippingFee(settings));
+      } catch {
+        if (!cancelled) setShippingFee(200);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const shipping = items.length > 0 ? shippingFee : 0;
   const total = subtotal + shipping;
 
   if (!ready) {
@@ -24,20 +50,10 @@ export function CartPageView() {
 
   if (items.length === 0) {
     return (
-      <div className="shell py-16 text-center lg:py-24">
-        <h2 className="font-fredoka text-[28px] font-medium text-ink">
-          Your cart is empty
-        </h2>
-        <p className="mt-3 font-poppins text-[15px] text-body">
-          Browse our collection and add something soft for little moments.
-        </p>
-        <Link
-          href="/shop"
-          className="mt-8 inline-flex h-12 items-center justify-center rounded-md bg-salmon px-8 font-poppins text-[14px] font-semibold uppercase tracking-wide text-white transition-colors hover:bg-salmon-soft"
-        >
-          Continue shopping
-        </Link>
-      </div>
+      <EmptyCartState
+        title="Your cart is empty"
+        description="Browse our collection and add something soft for little moments."
+      />
     );
   }
 

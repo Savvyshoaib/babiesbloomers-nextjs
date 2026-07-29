@@ -60,6 +60,8 @@ export function NewArrivals() {
       price: p.price,
       badge: p.badge,
       slug: p.slug,
+      averageRating: p.averageRating,
+      reviewsCount: p.reviewsCount,
       tabs: [
         "All",
         ...p.tabs.filter((t): t is NewArrivalTab =>

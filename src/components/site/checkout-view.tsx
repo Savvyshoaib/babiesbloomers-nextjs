@@ -2,23 +2,34 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { useCart } from "@/lib/cart-context";
 import { useAppSelector } from "@/store/hooks";
 import { formatPkrCheckout } from "@/lib/format";
-import { STANDARD_SHIPPING_FEE } from "@/lib/site-data";
 import { placeOrder } from "@/app/actions/orders";
 import {
   createOrGetUserByEmail,
   getCheckoutPrefill,
 } from "@/app/actions/auth";
-import { BagIcon, InfoIcon } from "./icons";
+import { applyCouponCode } from "@/app/actions/coupons";
+import {
+  enabledPaymentMethods,
+  mergeCheckoutSettings,
+  resolveShippingFee,
+  type CheckoutSettings,
+} from "@/lib/checkout-settings";
+import { InfoIcon, MinusIcon, PlusIcon } from "./icons";
 import { ButtonSpinner } from "./button-spinner";
 import { CheckoutSkeleton } from "./skeleton";
+import { EmptyCartState } from "./empty-cart-state";
 
-type PaymentMethod = "cod" | "payfast";
 type BillingMode = "same" | "different";
+
+type AppliedCoupon = {
+  code: string;
+  discountAmount: number;
+};
 
 type CheckoutResult =
   | { type: "new_account"; invoiceNumber: string }
@@ -74,19 +85,61 @@ function writeLocalDelivery(data: DeliveryForm) {
 }
 
 export function CheckoutView() {
-  const { items, subtotal, clearCart, itemCount, ready } = useCart();
+  const {
+    items,
+    subtotal,
+    clearCart,
+    itemCount,
+    ready,
+    removeItem,
+    updateQuantity,
+  } = useCart();
   const user = useAppSelector((s) => s.auth.user);
   const authReady = useAppSelector((s) => s.auth.initialized);
 
-  const [payment, setPayment] = useState<PaymentMethod>("payfast");
+  const [checkoutSettings, setCheckoutSettings] =
+    useState<CheckoutSettings | null>(null);
+  const [payment, setPayment] = useState("");
   const [billing, setBilling] = useState<BillingMode>("same");
+  const [billingForm, setBillingForm] = useState<DeliveryForm>(emptyDelivery);
   const [discount, setDiscount] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
+    null,
+  );
+  const [couponPending, setCouponPending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<CheckoutResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveInfo, setSaveInfo] = useState(true);
   const [delivery, setDelivery] = useState<DeliveryForm>(emptyDelivery);
   const [prefillReady, setPrefillReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSettings() {
+      try {
+        const res = await fetch("/api/checkout-settings", { cache: "no-store" });
+        const json = await res.json();
+        if (cancelled) return;
+        const settings = mergeCheckoutSettings(json.data);
+        setCheckoutSettings(settings);
+        const enabled = enabledPaymentMethods(settings);
+        setPayment((prev) =>
+          enabled.some((p) => p.id === prev) ? prev : enabled[0]?.id || "",
+        );
+      } catch {
+        if (!cancelled) {
+          const settings = mergeCheckoutSettings(null);
+          setCheckoutSettings(settings);
+          setPayment(enabledPaymentMethods(settings)[0]?.id || "");
+        }
+      }
+    }
+    loadSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!authReady) return;
@@ -107,6 +160,18 @@ export function CheckoutView() {
             country: saved.country || "Pakistan",
             phone: saved.phone,
           });
+          if (saved.billing) {
+            setBillingForm({
+              email: saved.email || user.email || "",
+              firstName: saved.billing.firstName,
+              lastName: saved.billing.lastName,
+              address: saved.billing.address,
+              city: saved.billing.city,
+              postal: saved.billing.postal,
+              country: saved.billing.country || "Pakistan",
+              phone: saved.billing.phone,
+            });
+          }
           setSaveInfo(true);
         } else {
           setDelivery((prev) => ({
@@ -137,12 +202,52 @@ export function CheckoutView() {
     setDelivery((prev) => ({ ...prev, [key]: value }));
   }
 
-  const shipping = items.length > 0 ? STANDARD_SHIPPING_FEE : 0;
-  const total = subtotal + shipping;
+  function updateBillingForm<K extends keyof DeliveryForm>(
+    key: K,
+    value: DeliveryForm[K],
+  ) {
+    setBillingForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  const payments = useMemo(
+    () => (checkoutSettings ? enabledPaymentMethods(checkoutSettings) : []),
+    [checkoutSettings],
+  );
+  const selectedPayment = payments.find((p) => p.id === payment) ?? null;
+  const shipping =
+    items.length > 0 && checkoutSettings
+      ? resolveShippingFee(checkoutSettings)
+      : 0;
+  const discountAmount = appliedCoupon?.discountAmount ?? 0;
+  const total = Math.max(0, subtotal - discountAmount + shipping);
+  const customSections =
+    checkoutSettings?.customSections.filter((s) => s.enabled) ?? [];
+
+  async function onApplyCoupon() {
+    if (!discount.trim() || couponPending) return;
+    setCouponPending(true);
+    const res = await applyCouponCode(discount, subtotal);
+    setCouponPending(false);
+    if (!res.success || !res.data) {
+      setAppliedCoupon(null);
+      toast.error(res.message || "Could not apply coupon.");
+      return;
+    }
+    setAppliedCoupon({
+      code: res.data.code,
+      discountAmount: res.data.discountAmount,
+    });
+    setDiscount(res.data.code);
+    toast.success(res.message || "Coupon applied.");
+  }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (items.length === 0 || submitting) return;
+    if (!payment) {
+      toast.error("Please select a payment method.");
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -155,6 +260,22 @@ export function CheckoutView() {
     const postal = delivery.postal.trim();
     const phone = delivery.phone.trim();
     const country = delivery.country.trim() || "Pakistan";
+
+    if (billing === "different") {
+      if (
+        !billingForm.firstName.trim() ||
+        !billingForm.lastName.trim() ||
+        !billingForm.address.trim() ||
+        !billingForm.city.trim() ||
+        !billingForm.phone.trim()
+      ) {
+        const message = "Please complete all required billing fields.";
+        setError(message);
+        toast.error(message);
+        setSubmitting(false);
+        return;
+      }
+    }
 
     let userId = user?.id ?? null;
     let checkoutResultType: CheckoutResult["type"] = "logged_in";
@@ -199,6 +320,8 @@ export function CheckoutView() {
       paymentMethod: payment,
       subtotal,
       shippingFee: shipping,
+      discountAmount,
+      couponCode: appliedCoupon?.code ?? null,
       total,
       items: items.map((item) => ({
         slug: item.slug,
@@ -216,6 +339,19 @@ export function CheckoutView() {
             temporaryPassword,
           },
       saveInfo,
+      billingMode: billing,
+      billing:
+        billing === "different"
+          ? {
+              firstName: billingForm.firstName.trim(),
+              lastName: billingForm.lastName.trim(),
+              address: billingForm.address.trim(),
+              city: billingForm.city.trim(),
+              postal: billingForm.postal.trim(),
+              country: billingForm.country.trim() || "Pakistan",
+              phone: billingForm.phone.trim(),
+            }
+          : null,
     });
 
     if (!orderResult.success || !orderResult.data?.invoiceNumber) {
@@ -259,26 +395,20 @@ export function CheckoutView() {
     setSubmitting(false);
   }
 
-  if (!ready || !authReady || !prefillReady) {
+  if (!ready || !authReady || !prefillReady || !checkoutSettings) {
     return <CheckoutSkeleton />;
   }
 
   if (items.length === 0 && !result) {
     return (
-      <div className="mx-auto max-w-lg px-5 py-20 text-center">
-        <h1 className="font-fredoka text-[28px] font-medium text-ink">
-          Your cart is empty
-        </h1>
-        <p className="mt-3 font-poppins text-[15px] text-body">
-          Add items before checking out.
-        </p>
-        <Link
-          href="/shop"
-          className="mt-8 inline-flex h-12 cursor-pointer items-center justify-center rounded-md bg-salmon px-8 font-poppins text-[14px] font-semibold uppercase text-white hover:bg-salmon-soft"
-        >
-          Continue shopping
-        </Link>
-      </div>
+      <EmptyCartState
+        title="Your cart is empty"
+        description="Add items before checking out — soft essentials for little moments are waiting in the shop."
+        primaryHref="/shop"
+        primaryLabel="Continue shopping"
+        secondaryHref="/cart"
+        secondaryLabel="View cart"
+      />
     );
   }
 
@@ -375,35 +505,6 @@ export function CheckoutView() {
     <div className="min-h-screen lg:grid lg:grid-cols-2">
       <div className="bg-white px-5 py-8 sm:px-10 lg:px-12 xl:px-16 lg:py-10">
         <div className="mx-auto w-full max-w-[560px]">
-          <div className="mb-8 flex items-center justify-between lg:hidden">
-            <Link href="/" aria-label="Babies Bloomers home">
-              <Image
-                src="/images/logo.png"
-                alt="Babies Bloomers"
-                width={842}
-                height={180}
-                className="h-10 w-auto"
-                priority
-              />
-            </Link>
-            <Link
-              href="/cart"
-              aria-label={
-                itemCount > 0
-                  ? `Cart, ${itemCount} ${itemCount === 1 ? "item" : "items"}`
-                  : "Cart"
-              }
-              className="relative text-ink"
-            >
-              <BagIcon className="size-6" />
-              {itemCount > 0 ? (
-                <span className="absolute -right-1.5 -top-1.5 flex size-[18px] items-center justify-center rounded-full bg-salmon text-[10px] font-semibold text-white">
-                  {itemCount}
-                </span>
-              ) : null}
-            </Link>
-          </div>
-
           <form onSubmit={onSubmit} className="space-y-8">
             <section>
               <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
@@ -555,22 +656,27 @@ export function CheckoutView() {
               </div>
             </section>
 
-            <section>
-              <h2 className="mb-3 font-poppins text-[18px] font-semibold text-ink">
-                Shipping method
-              </h2>
-              <label className="flex cursor-pointer items-center justify-between rounded-lg border-2 border-salmon bg-[#fff5f2] px-4 py-3.5">
-                <span className="flex items-center gap-3 font-poppins text-[14px] font-medium text-ink">
-                  <span className="flex size-4 items-center justify-center rounded-full border-2 border-salmon">
-                    <span className="size-2 rounded-full bg-salmon" />
+            {checkoutSettings.shipping.enabled &&
+            checkoutSettings.shipping.mode !== "disabled" ? (
+              <section>
+                <h2 className="mb-3 font-poppins text-[18px] font-semibold text-ink">
+                  Shipping method
+                </h2>
+                <label className="flex cursor-pointer items-center justify-between rounded-lg border-2 border-salmon bg-[#fff5f2] px-4 py-3.5">
+                  <span className="flex items-center gap-3 font-poppins text-[14px] font-medium text-ink">
+                    <span className="flex size-4 items-center justify-center rounded-full border-2 border-salmon">
+                      <span className="size-2 rounded-full bg-salmon" />
+                    </span>
+                    {checkoutSettings.shipping.label}
                   </span>
-                  Standard Shipping
-                </span>
-                <span className="font-poppins text-[14px] font-semibold text-ink">
-                  {formatPkrCheckout(STANDARD_SHIPPING_FEE)}
-                </span>
-              </label>
-            </section>
+                  <span className="font-poppins text-[14px] font-semibold text-ink">
+                    {shipping === 0
+                      ? "FREE"
+                      : formatPkrCheckout(shipping)}
+                  </span>
+                </label>
+              </section>
+            ) : null}
 
             <section>
               <h2 className="font-poppins text-[18px] font-semibold text-ink">
@@ -579,62 +685,57 @@ export function CheckoutView() {
               <p className="mt-1 mb-3 font-poppins text-[13px] text-body">
                 All transactions are secure and encrypted.
               </p>
-              <div className="overflow-hidden rounded-lg border border-[#cfcfcf]">
-                <label
-                  className={`flex cursor-pointer items-center gap-3 border-b border-[#eee] px-4 py-3.5 ${
-                    payment === "cod" ? "bg-[#fff5f2]" : "bg-white"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="cod"
-                    checked={payment === "cod"}
-                    onChange={() => setPayment("cod")}
-                    className="accent-salmon"
-                  />
-                  <span className="font-poppins text-[14px] font-medium text-ink">
-                    Cash on Delivery (COD)
-                  </span>
-                </label>
-                <div
-                  className={
-                    payment === "payfast" ? "bg-[#fff5f2]" : "bg-white"
-                  }
-                >
-                  <label className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3.5">
-                    <span className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        name="payment"
-                        value="payfast"
-                        checked={payment === "payfast"}
-                        onChange={() => setPayment("payfast")}
-                        className="accent-salmon"
-                      />
-                      <span className="font-poppins text-[14px] font-medium text-ink">
-                        PAYFAST (Pay via Debit/Credit/Wallet/Bank Account)
-                      </span>
-                    </span>
-                    <span className="hidden shrink-0 gap-1 sm:flex">
-                      {["Visa", "MC", "UP"].map((brand) => (
-                        <span
-                          key={brand}
-                          className="rounded border border-[#ddd] bg-white px-1.5 py-0.5 font-poppins text-[10px] font-semibold text-body"
-                        >
-                          {brand}
+              {payments.length === 0 ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 font-poppins text-[13px] text-amber-800">
+                  No payment methods are enabled. Please contact the store.
+                </p>
+              ) : (
+                <div className="overflow-hidden rounded-lg border border-[#cfcfcf]">
+                  {payments.map((method, i) => (
+                    <div
+                      key={method.id}
+                      className={
+                        payment === method.id ? "bg-[#fff5f2]" : "bg-white"
+                      }
+                    >
+                      <label
+                        className={`flex cursor-pointer items-center gap-3 px-4 py-3.5 ${
+                          i < payments.length - 1 || payment === method.id
+                            ? "border-b border-[#eee]"
+                            : ""
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="payment"
+                          value={method.id}
+                          checked={payment === method.id}
+                          onChange={() => setPayment(method.id)}
+                          className="accent-salmon"
+                        />
+                        <span className="font-poppins text-[14px] font-medium text-ink">
+                          {method.label}
                         </span>
-                      ))}
-                    </span>
-                  </label>
-                  {payment === "payfast" ? (
-                    <p className="border-t border-[#f0d4cc] px-4 py-3 font-poppins text-[12px] leading-5 text-body">
-                      After clicking &quot;Pay now&quot;, you will be redirected
-                      to PAYFAST to complete your purchase securely.
-                    </p>
-                  ) : null}
+                      </label>
+                      {payment === method.id &&
+                      (method.description || method.bankDetails) ? (
+                        <div className="space-y-2 border-t border-[#f0d4cc] px-4 py-3">
+                          {method.description ? (
+                            <p className="font-poppins text-[12px] leading-5 text-body">
+                              {method.description}
+                            </p>
+                          ) : null}
+                          {method.bankDetails ? (
+                            <pre className="whitespace-pre-wrap rounded-md bg-white/70 p-3 font-poppins text-[12px] leading-5 text-ink">
+                              {method.bankDetails}
+                            </pre>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </section>
 
             <section>
@@ -671,7 +772,94 @@ export function CheckoutView() {
                   </label>
                 ))}
               </div>
+              {billing === "different" ? (
+                <div className="mt-3 space-y-3 rounded-lg border border-[#eee] bg-[#fafafa] p-4">
+                  <div>
+                    <select
+                      value={billingForm.country}
+                      onChange={(e) =>
+                        updateBillingForm("country", e.target.value)
+                      }
+                      className="h-12 w-full rounded-lg border border-[#cfcfcf] bg-white px-3.5 font-poppins text-[14px] text-ink"
+                    >
+                      <option>Pakistan</option>
+                    </select>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input
+                      required
+                      value={billingForm.firstName}
+                      onChange={(e) =>
+                        updateBillingForm("firstName", e.target.value)
+                      }
+                      placeholder="First name"
+                      className="h-12 rounded-lg border border-[#cfcfcf] px-3.5 font-poppins text-[14px] text-ink"
+                    />
+                    <input
+                      required
+                      value={billingForm.lastName}
+                      onChange={(e) =>
+                        updateBillingForm("lastName", e.target.value)
+                      }
+                      placeholder="Last name"
+                      className="h-12 rounded-lg border border-[#cfcfcf] px-3.5 font-poppins text-[14px] text-ink"
+                    />
+                  </div>
+                  <input
+                    required
+                    value={billingForm.address}
+                    onChange={(e) =>
+                      updateBillingForm("address", e.target.value)
+                    }
+                    placeholder="Address"
+                    className="h-12 w-full rounded-lg border border-[#cfcfcf] px-3.5 font-poppins text-[14px] text-ink"
+                  />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input
+                      required
+                      value={billingForm.city}
+                      onChange={(e) =>
+                        updateBillingForm("city", e.target.value)
+                      }
+                      placeholder="City"
+                      className="h-12 rounded-lg border border-[#cfcfcf] px-3.5 font-poppins text-[14px] text-ink"
+                    />
+                    <input
+                      value={billingForm.postal}
+                      onChange={(e) =>
+                        updateBillingForm("postal", e.target.value)
+                      }
+                      placeholder="Postal code (optional)"
+                      className="h-12 rounded-lg border border-[#cfcfcf] px-3.5 font-poppins text-[14px] text-ink"
+                    />
+                  </div>
+                  <input
+                    required
+                    type="tel"
+                    value={billingForm.phone}
+                    onChange={(e) =>
+                      updateBillingForm("phone", e.target.value)
+                    }
+                    placeholder="Phone"
+                    className="h-12 w-full rounded-lg border border-[#cfcfcf] px-3.5 font-poppins text-[14px] text-ink"
+                  />
+                </div>
+              ) : null}
             </section>
+
+            {customSections.map((section) => (
+              <section
+                key={section.id}
+                className="rounded-lg border border-[#eee] bg-[#fafafa] p-4"
+              >
+                <h2 className="font-poppins text-[16px] font-semibold text-ink">
+                  {section.title}
+                </h2>
+                <p className="mt-2 whitespace-pre-wrap font-poppins text-[13px] leading-6 text-body">
+                  {section.body}
+                </p>
+              </section>
+            ))}
 
             {error && (
               <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 font-poppins text-[13px] text-red-600">
@@ -681,7 +869,7 @@ export function CheckoutView() {
 
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || payments.length === 0}
               className="flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-salmon font-poppins text-[16px] font-semibold text-white transition-colors hover:bg-salmon-soft disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? (
@@ -689,6 +877,8 @@ export function CheckoutView() {
                   <ButtonSpinner />
                   Placing Order…
                 </>
+              ) : selectedPayment?.type === "cod" ? (
+                "Place order"
               ) : (
                 "Pay now"
               )}
@@ -719,35 +909,6 @@ export function CheckoutView() {
 
       <aside className="border-t border-[#eee] bg-[#f5f5f5] px-5 py-8 sm:px-10 lg:border-l lg:border-t-0 lg:px-12 xl:px-14 lg:py-10">
         <div className="mx-auto w-full max-w-[420px] lg:sticky lg:top-8">
-          <div className="mb-8 hidden items-center justify-between lg:flex">
-            <Link href="/" aria-label="Babies Bloomers home">
-              <Image
-                src="/images/logo.png"
-                alt="Babies Bloomers"
-                width={842}
-                height={180}
-                className="h-11 w-auto"
-                priority
-              />
-            </Link>
-            <Link
-              href="/cart"
-              aria-label={
-                itemCount > 0
-                  ? `Cart, ${itemCount} ${itemCount === 1 ? "item" : "items"}`
-                  : "Cart"
-              }
-              className="relative text-ink"
-            >
-              <BagIcon className="size-6" />
-              {itemCount > 0 ? (
-                <span className="absolute -right-1.5 -top-1.5 flex size-[18px] items-center justify-center rounded-full bg-salmon text-[10px] font-semibold text-white">
-                  {itemCount}
-                </span>
-              ) : null}
-            </Link>
-          </div>
-
           <ul className="space-y-4">
             {items.map((item) => (
               <li key={item.id} className="flex items-start gap-3">
@@ -770,6 +931,40 @@ export function CheckoutView() {
                   <p className="mt-0.5 font-poppins text-[12px] text-body">
                     {item.size}
                   </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <div className="inline-flex h-8 items-center rounded border border-[#ddd] bg-white">
+                      <button
+                        type="button"
+                        aria-label="Decrease quantity"
+                        onClick={() =>
+                          updateQuantity(item.id, item.quantity - 1)
+                        }
+                        className="flex size-8 items-center justify-center text-ink hover:text-salmon"
+                      >
+                        <MinusIcon className="size-3.5" />
+                      </button>
+                      <span className="min-w-[28px] text-center font-poppins text-[13px] font-medium text-ink">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="Increase quantity"
+                        onClick={() =>
+                          updateQuantity(item.id, item.quantity + 1)
+                        }
+                        className="flex size-8 items-center justify-center text-ink hover:text-salmon"
+                      >
+                        <PlusIcon className="size-3.5" />
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      className="font-poppins text-[12px] text-body underline underline-offset-2 transition-colors hover:text-salmon"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
                 <p className="shrink-0 font-poppins text-[13px] font-medium text-ink">
                   {formatPkrCheckout(item.priceValue * item.quantity)}
@@ -782,17 +977,28 @@ export function CheckoutView() {
             <input
               type="text"
               value={discount}
-              onChange={(e) => setDiscount(e.target.value)}
+              onChange={(e) => {
+                setDiscount(e.target.value);
+                if (appliedCoupon) setAppliedCoupon(null);
+              }}
               placeholder="Discount code or gift card"
               className="h-11 flex-1 rounded-lg border border-[#cfcfcf] bg-white px-3 font-poppins text-[13px] text-ink placeholder:text-body focus:border-salmon focus:outline-none focus:ring-2 focus:ring-salmon/25"
             />
             <button
               type="button"
-              className="h-11 cursor-pointer rounded-lg bg-[#ddd] px-4 font-poppins text-[13px] font-semibold text-ink transition-colors hover:bg-[#d0d0d0]"
+              onClick={onApplyCoupon}
+              disabled={couponPending || !discount.trim()}
+              className="h-11 cursor-pointer rounded-lg bg-[#ddd] px-4 font-poppins text-[13px] font-semibold text-ink transition-colors hover:bg-[#d0d0d0] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Apply
+              {couponPending ? "…" : "Apply"}
             </button>
           </div>
+          {appliedCoupon ? (
+            <p className="mt-2 font-poppins text-[12px] text-emerald-700">
+              Coupon {appliedCoupon.code} applied (−
+              {formatPkrCheckout(appliedCoupon.discountAmount)})
+            </p>
+          ) : null}
 
           <dl className="mt-6 space-y-2.5 border-t border-[#e0e0e0] pt-5 font-poppins text-[14px]">
             <div className="flex justify-between">
@@ -803,10 +1009,20 @@ export function CheckoutView() {
                 {formatPkrCheckout(subtotal)}
               </dd>
             </div>
+            {discountAmount > 0 ? (
+              <div className="flex justify-between">
+                <dt className="text-body">Discount</dt>
+                <dd className="font-medium text-emerald-700">
+                  −{formatPkrCheckout(discountAmount)}
+                </dd>
+              </div>
+            ) : null}
             <div className="flex justify-between">
-              <dt className="text-body">Shipping</dt>
+              <dt className="text-body">
+                {checkoutSettings.shipping.label || "Shipping"}
+              </dt>
               <dd className="font-medium text-ink">
-                {formatPkrCheckout(shipping)}
+                {shipping === 0 ? "FREE" : formatPkrCheckout(shipping)}
               </dd>
             </div>
             <div className="flex items-baseline justify-between border-t border-[#e0e0e0] pt-4">

@@ -21,7 +21,7 @@ export function Testimonials() {
       style={{ backgroundImage: "url('/images/bg-testimonials.jpg')" }}
       aria-labelledby="testimonials-heading"
     >
-      <div className="border-b-2 border-dashed border-[#d6d6d6]">
+      <div className="">
         <div className="shell">
           <SectionHeading align="center" separator="pink">
             <span id="testimonials-heading">Parents Love Babies Bloomers</span>

@@ -386,6 +386,48 @@ export async function sendPasswordResetEmail(payload: {
   });
 }
 
+export async function sendAdminSetPasswordEmail(payload: {
+  to: string;
+  firstName?: string;
+  password: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const loginUrl = `${siteUrl()}/sign-in`;
+  const name = payload.firstName || "there";
+
+  const html = emailShell(
+    "Your password was updated",
+    `
+    <h1 style="margin:0 0 12px;font-family:Georgia,serif;font-size:24px;color:#121b28;">Password updated</h1>
+    <p style="margin:0 0 16px;font-size:14px;line-height:22px;">
+      Hi ${escapeHtml(name)}, an administrator updated the password for
+      <strong style="color:#121b28;">${escapeHtml(payload.to)}</strong>.
+      Use the new password below to sign in.
+    </p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fff5f2;border:1px solid #f0d4cc;border-radius:12px;margin:0 0 20px;">
+      <tr>
+        <td style="padding:18px 20px;">
+          <p style="margin:0 0 10px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#999;">New login details</p>
+          <p style="margin:0 0 8px;font-size:14px;color:#121b28;"><strong>Email:</strong> ${escapeHtml(payload.to)}</p>
+          <p style="margin:0;font-size:14px;color:#121b28;"><strong>Password:</strong> <span style="font-family:ui-monospace,Consolas,monospace;background:#fff;border:1px solid #f0d4cc;border-radius:6px;padding:4px 8px;">${escapeHtml(payload.password)}</span></p>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:0 0 22px;font-size:13px;line-height:20px;color:#727272;">
+      For security, change this password after signing in.
+    </p>
+    <a href="${loginUrl}" style="display:inline-block;background:#f3aa9b;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 22px;border-radius:999px;">
+      Sign in
+    </a>
+    `,
+  );
+
+  return sendMail({
+    to: payload.to,
+    subject: "Your Babies Bloomers password was updated",
+    html,
+  });
+}
+
 export async function sendWelcomeEmail(payload: {
   to: string;
   firstName: string;

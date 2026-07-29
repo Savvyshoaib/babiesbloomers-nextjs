@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 import { useCart } from "@/lib/cart-context";
 import { formatPkrCompact } from "@/lib/format";
 import {
+  BagIcon,
   CloseIcon,
   CouponIcon,
   MinusIcon,
@@ -30,6 +31,15 @@ export function CartDrawer() {
   useEffect(() => {
     closeDrawer();
   }, [pathname, closeDrawer]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [drawerOpen]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -81,14 +91,22 @@ export function CartDrawer() {
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {items.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 py-16 text-center">
-              <p className="font-poppins text-[15px] text-body">
-                Your cart is empty.
-              </p>
+            <div className="flex h-full flex-col items-center justify-center gap-4 py-16 text-center">
+              <span className="flex size-16 items-center justify-center rounded-full bg-[#fff5f2] text-salmon">
+                <BagIcon className="size-7" />
+              </span>
+              <div>
+                <p className="font-fredoka text-[20px] font-semibold text-ink">
+                  Your cart is empty
+                </p>
+                <p className="mt-1 font-poppins text-[13px] text-body">
+                  Add something soft for little moments.
+                </p>
+              </div>
               <Link
                 href="/shop"
                 onClick={closeDrawer}
-                className="font-poppins text-[14px] font-semibold text-salmon underline-offset-2 hover:underline"
+                className="inline-flex h-11 items-center rounded-full bg-salmon px-6 font-poppins text-[13px] font-semibold uppercase tracking-wide text-white transition-colors hover:bg-salmon-soft"
               >
                 Continue shopping
               </Link>

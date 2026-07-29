@@ -9,6 +9,16 @@ import {
   sendAccountCreatedEmail,
   sendOrderConfirmationEmail,
 } from "@/lib/email";
+import { fetchCheckoutSettings } from "@/lib/checkout-settings-server";
+import {
+  enabledPaymentMethods,
+  resolveShippingFee,
+} from "@/lib/checkout-settings";
+import {
+  normalizeCouponCode,
+  validateCouponAgainstCart,
+  type CouponRow,
+} from "@/lib/coupons";
 
 export type OrderStatus =
   | "pending"
@@ -59,9 +69,11 @@ export type PlaceOrderInput = {
   postal: string;
   country: string;
   phone: string;
-  paymentMethod: "cod" | "payfast";
+  paymentMethod: string;
   subtotal: number;
   shippingFee: number;
+  discountAmount?: number;
+  couponCode?: string | null;
   total: number;
   items: {
     slug: string;
@@ -79,6 +91,16 @@ export type PlaceOrderInput = {
   };
   /** Persist delivery address for next checkout */
   saveInfo?: boolean;
+  billingMode?: "same" | "different";
+  billing?: {
+    firstName: string;
+    lastName: string;
+    address: string;
+    city: string;
+    postal: string;
+    country: string;
+    phone: string;
+  } | null;
 };
 
 export type PlaceOrderData = {
@@ -140,7 +162,20 @@ export async function placeOrder(
     return fail("Please complete all required delivery fields.");
   }
 
-  let admin;
+  if (input.billingMode === "different") {
+    const b = input.billing;
+    if (
+      !b?.firstName?.trim() ||
+      !b?.lastName?.trim() ||
+      !b?.address?.trim() ||
+      !b?.city?.trim() ||
+      !b?.phone?.trim()
+    ) {
+      return fail("Please complete all required billing fields.");
+    }
+  }
+
+  let admin: ReturnType<typeof createAdminClient>;
   try {
     admin = createAdminClient();
   } catch {
@@ -149,6 +184,54 @@ export async function placeOrder(
       "Missing SUPABASE_SERVICE_ROLE_KEY",
     );
   }
+
+  const checkoutSettings = await fetchCheckoutSettings();
+  const enabledPayments = enabledPaymentMethods(checkoutSettings);
+  const paymentMethod = String(input.paymentMethod || "").trim();
+  if (
+    !paymentMethod ||
+    !enabledPayments.some((p) => p.id === paymentMethod)
+  ) {
+    return fail("Selected payment method is not available.");
+  }
+
+  const cartSubtotal = Number(
+    input.items
+      .reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+      .toFixed(2),
+  );
+  const shippingFee =
+    input.items.length > 0 ? resolveShippingFee(checkoutSettings) : 0;
+
+  let discountAmount = 0;
+  let couponCode: string | null = null;
+  const requestedCode = normalizeCouponCode(input.couponCode || "");
+  if (requestedCode) {
+    const { data: coupon } = await admin
+      .from("coupons")
+      .select("*")
+      .eq("code", requestedCode)
+      .maybeSingle();
+
+    if (!coupon) {
+      return fail("Coupon code not found.");
+    }
+
+    const validated = validateCouponAgainstCart(
+      coupon as CouponRow,
+      cartSubtotal,
+    );
+    if (!validated.ok) {
+      return fail(validated.message);
+    }
+
+    discountAmount = validated.discountAmount;
+    couponCode = validated.code;
+  }
+
+  const total = Number(
+    Math.max(0, cartSubtotal - discountAmount + shippingFee).toFixed(2),
+  );
 
   let userId = input.userId || null;
   if (!userId) {
@@ -164,10 +247,12 @@ export async function placeOrder(
       user_id: userId,
       invoice_number: invoiceNumber,
       status: "pending",
-      payment_method: input.paymentMethod,
-      subtotal: input.subtotal,
-      shipping_fee: input.shippingFee,
-      total: input.total,
+      payment_method: paymentMethod,
+      subtotal: cartSubtotal,
+      shipping_fee: shippingFee,
+      discount_amount: discountAmount,
+      coupon_code: couponCode,
+      total,
       shipping_first_name: input.firstName,
       shipping_last_name: input.lastName,
       shipping_address: input.address,
@@ -186,6 +271,23 @@ export async function placeOrder(
       "Could not place your order. Please try again.",
       orderError?.message,
     );
+  }
+
+  if (couponCode) {
+    const { data: coupon } = await admin
+      .from("coupons")
+      .select("id, used_count")
+      .eq("code", couponCode)
+      .maybeSingle();
+    if (coupon) {
+      await admin
+        .from("coupons")
+        .update({
+          used_count: Number(coupon.used_count || 0) + 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", coupon.id);
+    }
   }
 
   const itemRows = input.items.map((item) => ({
@@ -211,42 +313,89 @@ export async function placeOrder(
     );
   }
 
-  // Persist shipping address only when user opted to save
-  if (userId && input.saveInfo) {
-    const { data: existing } = await admin
-      .from("addresses")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("type", "shipping")
-      .maybeSingle();
+  // Persist shipping / billing addresses
+  if (userId && (input.saveInfo || input.billingMode === "different")) {
+    async function upsertAddressRow(
+      type: "shipping" | "billing",
+      data: {
+        firstName: string;
+        lastName: string;
+        address: string;
+        city: string;
+        postal: string;
+        country: string;
+        phone: string;
+      },
+    ) {
+      const { data: existing } = await admin
+        .from("addresses")
+        .select("id")
+        .eq("user_id", userId!)
+        .eq("type", type)
+        .maybeSingle();
 
-    const addressRow = {
-      user_id: userId,
-      type: "shipping" as const,
-      first_name: input.firstName,
-      last_name: input.lastName,
-      address: input.address,
-      city: input.city,
-      postal_code: input.postal,
-      country: input.country,
-      phone: input.phone,
-    };
+      const addressRow = {
+        user_id: userId!,
+        type,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        address: data.address,
+        city: data.city,
+        postal_code: data.postal,
+        country: data.country,
+        phone: data.phone,
+      };
 
-    if (existing) {
-      await admin.from("addresses").update(addressRow).eq("id", existing.id);
-    } else {
-      await admin.from("addresses").insert(addressRow);
+      if (existing) {
+        await admin.from("addresses").update(addressRow).eq("id", existing.id);
+      } else {
+        await admin.from("addresses").insert(addressRow);
+      }
     }
 
-    // Keep profile phone in sync when saving checkout info
-    await admin
-      .from("profiles")
-      .update({
-        first_name: input.firstName,
-        last_name: input.lastName,
+    if (input.saveInfo) {
+      await upsertAddressRow("shipping", {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        address: input.address,
+        city: input.city,
+        postal: input.postal,
+        country: input.country,
         phone: input.phone,
-      })
-      .eq("id", userId);
+      });
+
+      await admin
+        .from("profiles")
+        .update({
+          first_name: input.firstName,
+          last_name: input.lastName,
+          phone: input.phone,
+        })
+        .eq("id", userId);
+    }
+
+    if (input.billingMode === "different" && input.billing) {
+      await upsertAddressRow("billing", {
+        firstName: input.billing.firstName.trim(),
+        lastName: input.billing.lastName.trim(),
+        address: input.billing.address.trim(),
+        city: input.billing.city.trim(),
+        postal: input.billing.postal.trim(),
+        country: input.billing.country.trim() || "Pakistan",
+        phone: input.billing.phone.trim(),
+      });
+    } else if (input.saveInfo && input.billingMode !== "different") {
+      // Keep billing in sync with shipping when "same"
+      await upsertAddressRow("billing", {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        address: input.address,
+        city: input.city,
+        postal: input.postal,
+        country: input.country,
+        phone: input.phone,
+      });
+    }
   }
 
   const email = input.email.trim().toLowerCase();
@@ -269,10 +418,10 @@ export async function placeOrder(
     to: email,
     firstName: input.firstName,
     invoiceNumber,
-    paymentMethod: input.paymentMethod,
-    subtotal: input.subtotal,
-    shippingFee: input.shippingFee,
-    total: input.total,
+    paymentMethod,
+    subtotal: cartSubtotal,
+    shippingFee,
+    total,
     items: input.items.map((item) => ({
       title: item.title,
       size: item.size,

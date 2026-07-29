@@ -538,6 +538,15 @@ export type CheckoutPrefill = {
   country: string;
   phone: string;
   email: string;
+  billing: {
+    firstName: string;
+    lastName: string;
+    address: string;
+    city: string;
+    postal: string;
+    country: string;
+    phone: string;
+  } | null;
 };
 
 export async function getCheckoutPrefill(): Promise<CheckoutPrefill | null> {
@@ -546,7 +555,7 @@ export async function getCheckoutPrefill(): Promise<CheckoutPrefill | null> {
 
   const supabase = await createClient();
 
-  const [{ data: profile }, { data: shipping }] = await Promise.all([
+  const [{ data: profile }, { data: addresses }] = await Promise.all([
     supabase
       .from("profiles")
       .select("first_name, last_name, phone, email")
@@ -555,10 +564,11 @@ export async function getCheckoutPrefill(): Promise<CheckoutPrefill | null> {
     supabase
       .from("addresses")
       .select("*")
-      .eq("user_id", session.userId)
-      .eq("type", "shipping")
-      .maybeSingle(),
+      .eq("user_id", session.userId),
   ]);
+
+  const shipping = addresses?.find((a) => a.type === "shipping");
+  const billing = addresses?.find((a) => a.type === "billing");
 
   return {
     firstName: shipping?.first_name || profile?.first_name || "",
@@ -569,6 +579,17 @@ export async function getCheckoutPrefill(): Promise<CheckoutPrefill | null> {
     country: shipping?.country || "Pakistan",
     phone: shipping?.phone || profile?.phone || "",
     email: session.email || profile?.email || "",
+    billing: billing
+      ? {
+          firstName: billing.first_name || "",
+          lastName: billing.last_name || "",
+          address: billing.address || "",
+          city: billing.city || "",
+          postal: billing.postal_code || "",
+          country: billing.country || "Pakistan",
+          phone: billing.phone || "",
+        }
+      : null,
   };
 }
 
