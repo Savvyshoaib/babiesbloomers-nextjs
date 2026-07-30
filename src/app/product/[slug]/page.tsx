@@ -7,16 +7,14 @@ import { ProductDetail } from "@/components/site/product-detail";
 import {
   fetchCatalogCategories,
   fetchCatalogProductBySlug,
-  fetchCatalogProducts,
 } from "@/lib/catalog";
 import { getProductApprovedReviews } from "@/app/actions/reviews";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export async function generateStaticParams() {
-  const products = await fetchCatalogProducts();
-  return products.map((p) => ({ slug: p.slug }));
-}
+// Always fetch latest product data (no static HTML stale cache).
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;

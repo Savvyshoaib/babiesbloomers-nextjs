@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin, requirePermission } from "@/lib/admin";
 import { fail, ok, type ApiResponse } from "@/lib/api-response";
+import { revalidateStorefront } from "@/lib/storefront-cache";
 import {
   shopCategories,
   shopProducts,
@@ -1009,10 +1010,7 @@ export async function upsertProduct(
     if (error) return fail("Could not update product.", error.message);
     revalidatePath("/admin/products");
     revalidatePath(`/admin/products/${id}`);
-    revalidatePath("/shop");
-    revalidatePath("/");
-    revalidatePath("/new-arrivals");
-    revalidatePath(`/product/${slug}`);
+    revalidateStorefront([`/product/${slug}`]);
     return ok("Product updated.", { id });
   }
 
@@ -1027,9 +1025,7 @@ export async function upsertProduct(
   }
 
   revalidatePath("/admin/products");
-  revalidatePath("/shop");
-  revalidatePath("/");
-  revalidatePath("/new-arrivals");
+  revalidateStorefront([`/product/${slug}`]);
   return ok("Product created.", { id: data.id });
 }
 
@@ -1042,11 +1038,18 @@ export async function deleteProduct(
   if (!id) return fail("Product id is required.");
 
   const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("products")
+    .select("slug")
+    .eq("id", id)
+    .maybeSingle();
   const { error } = await admin.from("products").delete().eq("id", id);
   if (error) return fail("Could not delete product.", error.message);
 
   revalidatePath("/admin/products");
-  revalidatePath("/shop");
+  revalidateStorefront(
+    existing?.slug ? [`/product/${existing.slug}`] : [],
+  );
   return ok("Product deleted.");
 }
 
@@ -1116,7 +1119,7 @@ export async function seedCatalogFromSiteData(): Promise<ApiResponse> {
   });
 
   revalidatePath("/admin/products");
-  revalidatePath("/shop");
+  revalidateStorefront();
   return ok(
     `Catalog seeded: ${categoryRows.length} categories, ${productRows.length} products.`,
   );
@@ -1176,7 +1179,7 @@ export async function upsertCategory(
 
   revalidatePath("/admin/categories");
   revalidatePath("/admin/products");
-  revalidatePath("/shop");
+  revalidateStorefront();
   return ok(id ? "Category updated." : "Category created.");
 }
 
@@ -1193,7 +1196,7 @@ export async function deleteCategory(
   if (error) return fail("Could not delete category.", error.message);
 
   revalidatePath("/admin/categories");
-  revalidatePath("/shop");
+  revalidateStorefront();
   return ok("Category deleted.");
 }
 
@@ -1245,9 +1248,7 @@ export async function updateSiteSetting(
   revalidatePath("/admin/settings");
   revalidatePath("/admin/scripts");
   revalidatePath("/admin/content");
-  revalidatePath("/checkout");
-  revalidatePath("/cart");
-  revalidatePath("/");
+  revalidateStorefront();
   return ok("Settings saved.");
 }
 
@@ -1280,11 +1281,17 @@ export async function saveSiteContent(
   if (error) return fail("Could not save site content.", error.message);
 
   revalidatePath("/admin/content");
-  revalidatePath("/");
-  revalidatePath("/shop");
-  revalidatePath("/new-arrivals");
-  revalidatePath("/contact");
+  revalidateStorefront();
   return ok("Site content saved. Storefront updated.");
+}
+
+/** Manual purge: bust all storefront HTML/CDN cache immediately. */
+export async function purgeStorefrontCache(): Promise<ApiResponse> {
+  await requirePermission("settings");
+  revalidateStorefront();
+  return ok(
+    "Storefront cache purged. Customers will see the latest version on next visit.",
+  );
 }
 
 export async function getContactMessages() {

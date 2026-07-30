@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSession } from "@/lib/session";
 import { requirePermission } from "@/lib/admin";
 import { fail, ok, type ApiResponse } from "@/lib/api-response";
+import { revalidateStorefront } from "@/lib/storefront-cache";
 import {
   mergeReviewsSliderSettings,
   type ProductReview,
@@ -264,9 +265,7 @@ export async function moderateReview(
   if (error) return fail("Could not update review.", error.message);
 
   revalidatePath("/admin/reviews");
-  revalidatePath("/");
-  revalidatePath("/shop");
-  revalidatePath("/api/catalog");
+  revalidateStorefront();
   return ok(
     status === "approved"
       ? "Review approved and published."
@@ -285,7 +284,7 @@ export async function deleteReview(id: string): Promise<ApiResponse> {
   if (error) return fail("Could not delete review.", error.message);
 
   revalidatePath("/admin/reviews");
-  revalidatePath("/");
+  revalidateStorefront();
   return ok("Review deleted.");
 }
 
@@ -328,7 +327,7 @@ export async function saveReviewsSliderSettings(
   if (error) return fail("Could not save slider settings.", error.message);
 
   revalidatePath("/admin/reviews");
-  revalidatePath("/");
+  revalidateStorefront();
   return ok("Slider settings saved.");
 }
 
@@ -347,6 +346,29 @@ export async function getApprovedHomepageReviews(
 
     if (error) {
       console.error("getApprovedHomepageReviews:", error.message);
+      return [];
+    }
+    return (data ?? []) as ProductReview[];
+  } catch {
+    return [];
+  }
+}
+
+/** All approved reviews (featured + non-featured) for the storefront reviews panel. */
+export async function getAllApprovedReviews(
+  limit = 200,
+): Promise<ProductReview[]> {
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("product_reviews")
+      .select("*")
+      .eq("status", "approved")
+      .order("created_at", { ascending: false })
+      .limit(Math.min(500, Math.max(1, limit)));
+
+    if (error) {
+      console.error("getAllApprovedReviews:", error.message);
       return [];
     }
     return (data ?? []) as ProductReview[];

@@ -64,7 +64,7 @@ export function ReviewDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-label={`Review by ${review.customer_name || "Anonymous"}`}
@@ -88,12 +88,12 @@ export function ReviewDetailModal({
 
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#f5f5f5]">
           <Image
-            src={review.image_url || "/images/products/placeholder.jpg"}
-            alt=""
+            src={review.image_url || "/images/logo.png"}
+            alt={review.product_title || "Review"}
             fill
             sizes="(max-width: 640px) 100vw, 560px"
             className="object-cover"
-            unoptimized={review.image_url.startsWith("http")}
+            unoptimized={(review.image_url || "").startsWith("http")}
           />
         </div>
 

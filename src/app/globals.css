@@ -47,11 +47,11 @@
     min-width: 0;
   }
 
-  /* Keep native controls light when the device prefers dark. */
-  input,
+  /* Keep native form controls light when the device prefers dark.
+     Do NOT force button backgrounds — nav/UI buttons sit on dark surfaces. */
+  input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),
   textarea,
-  select,
-  button {
+  select {
     color-scheme: light;
   }
 
@@ -68,12 +68,12 @@
       color: var(--color-body) !important;
     }
 
-    input,
+    input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]),
     textarea,
-    select,
-    button {
+    select {
       color-scheme: light !important;
       background-color: #ffffff;
+      color: #121b28;
     }
   }
 
@@ -249,4 +249,174 @@
   to{
       transform:translateX(-120px);
   }
+}
+
+/* Fixed Reviews tab + all-reviews modal (explicit CSS — avoid stale/missing Tailwind arbitrary utilities) */
+.reviews-side-tab {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 9px;
+  border: 0;
+  border-radius: 6px 0 0 6px;
+  background: var(--color-salmon);
+  color: #fff;
+  box-shadow: -2px 4px 14px rgba(243, 170, 155, 0.4);
+  transform: translateY(-50%);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.reviews-side-tab:hover {
+  background: var(--color-salmon-soft);
+}
+
+.reviews-side-tab:active {
+  transform: translateY(-50%) scale(0.98);
+}
+
+.reviews-side-tab:focus-visible {
+  outline: 2px solid var(--color-salmon);
+  outline-offset: 2px;
+}
+
+.reviews-side-tab__label {
+  display: block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-family: var(--font-poppins);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  user-select: none;
+  line-height: 1.2;
+}
+
+@media (min-width: 640px) {
+  .reviews-side-tab {
+    padding: 16px 10px;
+  }
+
+  .reviews-side-tab__label {
+    font-size: 12px;
+  }
+}
+
+.reviews-scroll-top {
+  position: fixed;
+  right: 1rem;
+  bottom: 1.25rem;
+  z-index: 90;
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--color-salmon);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(243, 170, 155, 0.45);
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+.reviews-scroll-top:hover {
+  background: var(--color-salmon-soft);
+}
+
+.reviews-scroll-top:focus-visible {
+  outline: 2px solid var(--color-salmon);
+  outline-offset: 2px;
+}
+
+@media (min-width: 640px) {
+  .reviews-scroll-top {
+    right: 1.25rem;
+    bottom: 1.75rem;
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+.reviews-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .reviews-modal-root {
+    align-items: center;
+    padding: 1.25rem;
+  }
+}
+
+.reviews-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(18, 27, 40, 0.55);
+  backdrop-filter: blur(2px);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.reviews-modal-backdrop.is-open {
+  opacity: 1;
+}
+
+.reviews-modal-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 860px;
+  height: min(94vh, 920px);
+  max-height: min(94vh, 920px);
+  overflow: hidden;
+  border-radius: 20px 20px 0 0;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  transform: translateY(1.25rem) scale(0.98);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.reviews-modal-panel.is-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+@media (min-width: 640px) {
+  .reviews-modal-panel {
+    height: min(88vh, 860px);
+    max-height: min(88vh, 860px);
+    border-radius: 16px;
+    transform: translateY(0.75rem) scale(0.98);
+  }
+
+  .reviews-modal-panel.is-open {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.reviews-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }

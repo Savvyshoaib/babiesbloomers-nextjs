@@ -13,7 +13,9 @@ import { PromoBanners } from "@/components/site/promo-banners";
 import { TopPicks } from "@/components/site/top-picks";
 import { Vision } from "@/components/site/vision";
 
-export const revalidate = 60;
+// Always render fresh HTML — no ISR/CDN stale homepage after admin edits.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function Home() {
   const [reviews, sliderSettings] = await Promise.all([

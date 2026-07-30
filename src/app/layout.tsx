@@ -7,6 +7,10 @@ import { getSiteScripts } from "@/lib/site-scripts";
 import { fetchSiteContent } from "@/lib/site-content";
 import "./globals.css";
 
+// Keep root layout/scripts/metadata fresh for every request.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const fredoka = Fredoka({
   variable: "--font-fredoka",
   subsets: ["latin"],
@@ -41,9 +45,11 @@ export async function generateMetadata(): Promise<Metadata> {
       icon: content.branding.favicon || "/favicon.ico",
     },
     // Opt out of Android Chrome / WebView "Auto Dark Mode" page inversion.
+    // darkreader-lock: tells Dark Reader extension not to invert this site.
     other: {
       "color-scheme": "only light",
       "supported-color-schemes": "light",
+      "darkreader-lock": "true",
     },
   };
 }
@@ -63,6 +69,8 @@ export default async function RootLayout({
       style={{ colorScheme: "only light", backgroundColor: "#ffffff" }}
     >
       <head>
+        {/* Dark Reader extension: official lock — keeps storefront light. */}
+        <meta name="darkreader-lock" />
         {/* Earliest possible opt-out of Android Chrome / Samsung Auto Dark. */}
         <meta name="color-scheme" content="only light" />
         <meta name="supported-color-schemes" content="light" />
@@ -76,6 +84,12 @@ body{background-color:#fff!important;color:#727272!important}
   body{color:#727272!important}
 }
 `,
+          }}
+        />
+        {/* Re-assert Dark Reader lock if the extension injects before hydration. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(!document.querySelector('meta[name="darkreader-lock"]')){var m=document.createElement('meta');m.name='darkreader-lock';document.head.appendChild(m);}}catch(e){}})();`,
           }}
         />
       </head>
