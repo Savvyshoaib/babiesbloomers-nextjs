@@ -26,6 +26,10 @@
 @layer base {
   html {
     overflow-x: clip;
+    /* This site only ships a light theme. Without this, mobile browsers in
+       system dark mode auto-style native form controls/scrollbars dark,
+       clashing with our light UI (e.g. invisible input text). */
+    color-scheme: light;
   }
 
   body {

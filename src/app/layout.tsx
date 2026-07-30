@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fredoka, Poppins } from "next/font/google";
 import { Providers } from "@/components/site/providers";
 import { SiteScriptsInject } from "@/components/site/site-scripts-inject";
@@ -20,6 +20,10 @@ const poppins = Poppins({
   weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  colorScheme: "light",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const content = await fetchSiteContent();
