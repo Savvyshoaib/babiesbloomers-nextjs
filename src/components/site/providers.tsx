@@ -8,6 +8,8 @@ import { AuthInit } from "@/components/site/auth-init";
 import { CatalogInit } from "@/components/site/catalog-init";
 import { SiteContentInit } from "@/components/site/site-content-init";
 import { ReviewsInit } from "@/components/site/reviews-init";
+import { ReviewPopupToast } from "@/components/site/review-popup-toast";
+import { AllReviewsModal } from "@/components/site/all-reviews-modal";
 import { AppToaster } from "@/components/site/toaster";
 import type { ReactNode } from "react";
 
@@ -22,6 +24,8 @@ export function Providers({ children }: { children: ReactNode }) {
         <CartInit />
         {children}
         <CartDrawer />
+        <ReviewPopupToast />
+        <AllReviewsModal />
         <AppToaster />
       </SavedProductsProvider>
     </ReduxProvider>

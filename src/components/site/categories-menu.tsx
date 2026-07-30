@@ -97,7 +97,7 @@ export function CategoriesDesktopMegaMenu({
         aria-haspopup="true"
         aria-controls="categories-mega-menu"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-1.5 px-[35px] py-5 font-poppins text-[20px] leading-[28px] text-white transition-colors hover:text-salmon ${
+        className={`inline-flex items-center gap-1.5 bg-transparent px-[35px] py-5 font-poppins text-[20px] leading-[28px] text-white transition-colors hover:text-salmon ${
           active || open ? "font-semibold text-salmon" : "font-medium"
         }`}
       >

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { updateSiteSetting } from "@/app/actions/admin";
+import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { purgeStorefrontCache, updateSiteSetting } from "@/app/actions/admin";
 import {
   AdminSubmitButton,
   useAdminAction,
 } from "@/components/admin/admin-forms";
+import { ButtonSpinner } from "@/components/site/button-spinner";
 import {
   mergeCheckoutSettings,
   type CheckoutCustomSection,
@@ -34,6 +36,15 @@ export function SettingsForms({
 
   const checkoutAction = useAdminAction(updateSiteSetting);
   const promoAction = useAdminAction(updateSiteSetting);
+  const [purgePending, startPurge] = useTransition();
+
+  function handlePurgeCache() {
+    startPurge(async () => {
+      const res = await purgeStorefrontCache();
+      if (res.success) toast.success(res.message);
+      else toast.error(res.message);
+    });
+  }
 
   function updateShipping<K extends keyof CheckoutSettings["shipping"]>(
     key: K,
@@ -63,6 +74,31 @@ export function SettingsForms({
 
   return (
     <div className="space-y-6">
+      <div className="rounded-2xl border border-[#e8e2dc] bg-white p-5 shadow-sm">
+        <h2 className="mb-1 font-poppins text-[15px] font-semibold text-ink">
+          Storefront cache
+        </h2>
+        <p className="mb-4 font-poppins text-[13px] text-body">
+          The live site always serves fresh HTML (no query-string needed). Use
+          this if a CDN or browser still shows an old version after a big update.
+        </p>
+        <button
+          type="button"
+          onClick={handlePurgeCache}
+          disabled={purgePending}
+          className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-ink px-4 font-poppins text-[13px] font-semibold text-white transition-colors hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {purgePending ? (
+            <>
+              <ButtonSpinner />
+              Purging…
+            </>
+          ) : (
+            "Purge storefront cache"
+          )}
+        </button>
+      </div>
+
       <div className="rounded-2xl border border-[#e8e2dc] bg-white p-5 shadow-sm">
         <h2 className="mb-1 font-poppins text-[15px] font-semibold text-ink">
           Shipping
