@@ -15,6 +15,7 @@ function PremiumQualityIcon({ className }: { className?: string }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
+      
       <circle cx="12" cy="8" r="5" />
       <path d="M8.5 12.3 7 21l5-2.6 5 2.6-1.5-8.7" />
     </svg>
