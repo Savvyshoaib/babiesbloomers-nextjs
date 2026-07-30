@@ -24,12 +24,16 @@
 }
 
 @layer base {
+  /* Light-only storefront: opt out of OS / browser auto-dark inversion
+     (Android Chrome "Dark theme for web contents", Samsung Internet, etc.). */
+  :root {
+    color-scheme: only light;
+  }
+
   html {
     overflow-x: clip;
-    /* This site only ships a light theme. Without this, mobile browsers in
-       system dark mode auto-style native form controls/scrollbars dark,
-       clashing with our light UI (e.g. invisible input text). */
-    color-scheme: light;
+    color-scheme: only light;
+    background-color: #ffffff;
   }
 
   body {
@@ -41,6 +45,36 @@
     letter-spacing: 0.035px;
     overflow-x: clip;
     min-width: 0;
+  }
+
+  /* Keep native controls light when the device prefers dark. */
+  input,
+  textarea,
+  select,
+  button {
+    color-scheme: light;
+  }
+
+  /* Re-assert light canvas if a browser still tries to invert. */
+  @media (prefers-color-scheme: dark) {
+    :root,
+    html {
+      color-scheme: only light !important;
+      background-color: #ffffff !important;
+    }
+
+    body {
+      background-color: #ffffff !important;
+      color: var(--color-body) !important;
+    }
+
+    input,
+    textarea,
+    select,
+    button {
+      color-scheme: light !important;
+      background-color: #ffffff;
+    }
   }
 
   img,
