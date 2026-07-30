@@ -7,6 +7,7 @@ import { ReduxProvider } from "@/components/site/redux-provider";
 import { AuthInit } from "@/components/site/auth-init";
 import { CatalogInit } from "@/components/site/catalog-init";
 import { SiteContentInit } from "@/components/site/site-content-init";
+import { ReviewsInit } from "@/components/site/reviews-init";
 import { AppToaster } from "@/components/site/toaster";
 import type { ReactNode } from "react";
 
@@ -17,6 +18,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <AuthInit />
         <CatalogInit />
         <SiteContentInit />
+        <ReviewsInit />
         <CartInit />
         {children}
         <CartDrawer />

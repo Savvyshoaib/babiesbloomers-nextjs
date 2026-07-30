@@ -9,6 +9,7 @@ import {
   fetchCatalogProductBySlug,
   fetchCatalogProducts,
 } from "@/lib/catalog";
+import { getProductApprovedReviews } from "@/app/actions/reviews";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -35,6 +36,8 @@ export default async function ProductPage({ params }: Props) {
   ]);
   if (!product) notFound();
 
+  const initialReviews = await getProductApprovedReviews(slug);
+
   const categorySlug = product.categories[0];
   const categoryLabel =
     categories.find((c) => c.slug === categorySlug)?.label ??
@@ -53,7 +56,11 @@ export default async function ProductPage({ params }: Props) {
             { label: product.title },
           ]}
         />
-        <ProductDetail product={product} categoryLabel={categoryLabel} />
+        <ProductDetail
+          product={product}
+          categoryLabel={categoryLabel}
+          initialReviews={initialReviews}
+        />
       </main>
       <Footer />
     </>

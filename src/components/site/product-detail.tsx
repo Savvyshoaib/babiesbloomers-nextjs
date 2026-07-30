@@ -18,6 +18,8 @@ import {
 } from "./icons";
 import { useCart } from "@/lib/cart-context";
 import { useSavedProducts } from "@/lib/saved-products-context";
+import type { ProductReview } from "@/lib/reviews";
+import { ProductReviews } from "./product-reviews";
 
 type Tab = "description" | "additional" | "reviews";
 
@@ -31,9 +33,11 @@ const offerIcons = {
 export function ProductDetail({
   product,
   categoryLabel,
+  initialReviews,
 }: {
   product: CatalogProduct;
   categoryLabel: string;
+  initialReviews: ProductReview[];
 }) {
   const { addItem } = useCart();
   const {
@@ -409,7 +413,11 @@ export function ProductDetail({
             </dl>
           ) : null}
           {tab === "reviews" ? (
-            <p>There are no reviews yet. Be the first to review this product.</p>
+            <ProductReviews
+              key={product.slug}
+              productSlug={product.slug}
+              initialReviews={initialReviews}
+            />
           ) : null}
         </div>
       </div>

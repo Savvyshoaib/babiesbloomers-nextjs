@@ -5,6 +5,7 @@ import Link from "next/link";
 import { footerLinks } from "@/lib/site-data";
 import { useAppSelector } from "@/store/hooks";
 import { selectSiteContent } from "@/store/site-content-slice";
+import { TrustBadges } from "./trust-badges";
 import {
   FacebookIcon,
   InstagramIcon,
@@ -34,10 +35,12 @@ export function Footer() {
   const socials = socialLinks.filter((s) => s.enabled && s.href);
 
   return (
-    <footer
-      className="relative mt-[90px] bg-auto bg-top bg-no-repeat pt-[70px] max-[1200px]:pt-[50px] max-[880px]:bg-cover max-[767px]:pt-[30px] min-[1921px]:bg-[length:100%_auto]"
-      style={{ backgroundImage: "url('/images/bg-footer.png')" }}
-    >
+    <>
+      <TrustBadges />
+      <footer
+        className="relative mt-[90px] bg-auto bg-top bg-no-repeat pt-[70px] max-[1200px]:pt-[50px] max-[880px]:bg-cover max-[767px]:pt-[30px] min-[1921px]:bg-[length:100%_auto]"
+        style={{ backgroundImage: "url('/images/bg-footer.png')" }}
+      >
       <svg
 className="waves"
 xmlns="http://www.w3.org/2000/svg"
@@ -168,5 +171,6 @@ v44h-352z"/>
         </div>
       </div>
     </footer>
+    </>
   );
 }

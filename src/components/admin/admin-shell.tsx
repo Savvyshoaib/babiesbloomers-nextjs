@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
-import { signOut } from "@/app/actions/auth";
+import { performClientSignOut } from "@/lib/sign-out";
 import {
   CouponIcon,
   BoxIcon,
@@ -124,6 +124,10 @@ export function AdminShell({
     };
   }, [drawerOpen]);
 
+  async function handleSignOut() {
+    await performClientSignOut();
+  }
+
   return (
     <div className="min-h-dvh bg-[#f4f2ef]">
       <header className="sticky top-0 z-30 border-b border-[#e8e2dc] bg-white">
@@ -227,15 +231,14 @@ export function AdminShell({
             </ul>
           </nav>
           <div className="border-t border-[#f0ece8] p-3">
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 font-poppins text-[13px] font-medium text-red-500 transition-colors hover:bg-red-50"
-              >
-                <LogoutIcon className="size-4" />
-                Sign Out
-              </button>
-            </form>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 font-poppins text-[13px] font-medium text-red-500 transition-colors hover:bg-red-50"
+            >
+              <LogoutIcon className="size-4" />
+              Sign Out
+            </button>
           </div>
         </aside>
       </div>
@@ -255,15 +258,14 @@ export function AdminShell({
                 <p className="mb-3 truncate px-3 font-poppins text-[11px] text-body">
                   {email}
                 </p>
-                <form action={signOut}>
-                  <button
-                    type="submit"
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 font-poppins text-[13px] font-medium text-red-500 transition-colors hover:bg-red-50"
-                  >
-                    <LogoutIcon className="size-4" />
-                    Sign Out
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 font-poppins text-[13px] font-medium text-red-500 transition-colors hover:bg-red-50"
+                >
+                  <LogoutIcon className="size-4" />
+                  Sign Out
+                </button>
               </div>
             </nav>
           </div>

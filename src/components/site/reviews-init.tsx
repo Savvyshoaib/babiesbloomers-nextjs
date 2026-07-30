@@ -3,66 +3,71 @@
 import { useEffect, useRef } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import {
-  setCatalog,
-  setCatalogError,
-  setCatalogLoading,
-} from "@/store/catalog-slice";
+  setHomepageReviews,
+  setReviewsError,
+  setReviewsLoading,
+} from "@/store/reviews-slice";
 import { createClient } from "@/lib/supabase/client";
 import type { AppDispatch } from "@/store";
 
-async function loadCatalog(dispatch: AppDispatch) {
-  dispatch(setCatalogLoading(true));
+async function loadReviews(dispatch: AppDispatch) {
+  dispatch(setReviewsLoading(true));
   try {
-    const res = await fetch("/api/catalog", { cache: "no-store" });
+    const res = await fetch("/api/reviews", { cache: "no-store" });
     const json = await res.json();
     if (!res.ok || !json.success) {
-      throw new Error(json.message || "Failed to load catalog");
+      throw new Error(json.message || "Failed to load reviews");
     }
     dispatch(
-      setCatalog({
-        products: json.data.products,
-        categories: json.data.categories,
+      setHomepageReviews({
+        reviews: json.data.reviews,
+        settings: json.data.settings,
       }),
     );
   } catch (err) {
     dispatch(
-      setCatalogError(
-        err instanceof Error ? err.message : "Catalog load failed",
+      setReviewsError(
+        err instanceof Error ? err.message : "Reviews load failed",
       ),
     );
   }
 }
 
-export function CatalogInit() {
+export function ReviewsInit() {
   const dispatch = useAppDispatch();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    loadCatalog(dispatch);
+    loadReviews(dispatch);
   }, [dispatch]);
 
-  // Live-sync with admin panel: any product/category change in Supabase
-  // refetches the catalog so it shows up on the storefront instantly.
+  // Live-sync with admin panel: approve/reject/delete/feature a review, or
+  // change the homepage slider settings, refetches and updates instantly.
   useEffect(() => {
     const supabase = createClient();
 
     function scheduleReload() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        loadCatalog(dispatch);
+        loadReviews(dispatch);
       }, 400);
     }
 
     const channel = supabase
-      .channel("catalog-realtime")
+      .channel("reviews-realtime")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "products" },
+        { event: "*", schema: "public", table: "product_reviews" },
         scheduleReload,
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "categories" },
+        {
+          event: "*",
+          schema: "public",
+          table: "site_settings",
+          filter: "key=eq.reviews_slider",
+        },
         scheduleReload,
       )
       .subscribe();

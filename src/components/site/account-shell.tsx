@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType, ReactNode } from "react";
-import { signOut } from "@/app/actions/auth";
+import { performClientSignOut } from "@/lib/sign-out";
 import {
   HeartIcon,
   HomeIcon,
@@ -44,6 +44,10 @@ export function AccountShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+
+  async function handleSignOut() {
+    await performClientSignOut();
+  }
 
   return (
     <div className="min-h-dvh bg-[#faf9f7]">
@@ -97,15 +101,14 @@ export function AccountShell({
               </ul>
 
               <div className="mt-4 border-t border-[#f0ece8] pt-4">
-                <form action={signOut}>
-                  <button
-                    type="submit"
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 font-poppins text-[13px] font-medium text-red-500 transition-colors hover:bg-red-50"
-                  >
-                    <LogoutIcon className="size-4 shrink-0" />
-                    Sign Out
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 font-poppins text-[13px] font-medium text-red-500 transition-colors hover:bg-red-50"
+                >
+                  <LogoutIcon className="size-4 shrink-0" />
+                  Sign Out
+                </button>
               </div>
             </nav>
           </div>

@@ -9,7 +9,7 @@ import { useSavedProducts } from "@/lib/saved-products-context";
 import { useAppSelector } from "@/store/hooks";
 import { selectSiteContent } from "@/store/site-content-slice";
 import { navLinks } from "@/lib/site-data";
-import { signOut } from "@/app/actions/auth";
+import { performClientSignOut } from "@/lib/sign-out";
 import {
   CategoriesDesktopMegaMenu,
   CategoriesMobileAccordion,
@@ -116,7 +116,7 @@ export function Header() {
 
   async function handleSignOut() {
     setUserMenuOpen(false);
-    await signOut();
+    await performClientSignOut();
     router.refresh();
   }
 

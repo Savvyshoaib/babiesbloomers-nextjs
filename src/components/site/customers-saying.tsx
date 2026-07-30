@@ -5,25 +5,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { ProductReview } from "@/lib/reviews";
 import type { ReviewsSliderSettings } from "@/lib/reviews";
+import { useAppSelector } from "@/store/hooks";
 import { RatingStars } from "./rating-stars";
-
-function VerifiedBadge() {
-  return (
-    <span
-      className="inline-flex size-[16px] items-center justify-center rounded-full bg-ink text-white"
-      title="Verified buyer"
-      aria-label="Verified buyer"
-    >
-      <svg viewBox="0 0 20 20" className="size-[10px]" fill="currentColor">
-        <path
-          fillRule="evenodd"
-          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-          clipRule="evenodd"
-        />
-      </svg>
-    </span>
-  );
-}
+import { ReviewDetailModal, VerifiedBadge } from "./review-shared";
 
 function Chevron({ dir }: { dir: "left" | "right" }) {
   return (
@@ -47,12 +31,20 @@ function Chevron({ dir }: { dir: "left" | "right" }) {
 }
 
 export function CustomersSaying({
-  reviews,
-  settings,
+  reviews: initialReviews,
+  settings: initialSettings,
 }: {
   reviews: ProductReview[];
   settings: ReviewsSliderSettings;
 }) {
+  // Prefer live Redux data (kept fresh in real time by ReviewsInit) once
+  // it's loaded; fall back to server-rendered props for the first paint.
+  const liveReviews = useAppSelector((s) => s.reviews.homepageReviews);
+  const liveSettings = useAppSelector((s) => s.reviews.sliderSettings);
+  const initialized = useAppSelector((s) => s.reviews.initialized);
+  const reviews = initialized ? liveReviews : initialReviews;
+  const settings = initialized ? liveSettings : initialSettings;
+
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(settings.visibleDesktop);
 
@@ -102,6 +94,10 @@ export function CustomersSaying({
       count: reviews.length,
     };
   }, [reviews]);
+
+  const [selectedReview, setSelectedReview] = useState<ProductReview | null>(
+    null,
+  );
 
   if (reviews.length === 0) {
     return null;
@@ -183,7 +179,19 @@ export function CustomersSaying({
                   className="shrink-0"
                   style={{ width: `calc((100% - ${(visible - 1) * 16}px) / ${visible})` }}
                 >
-                  <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-[#eee] bg-white">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View review by ${review.customer_name || "Anonymous"}`}
+                    onClick={() => setSelectedReview(review)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedReview(review);
+                      }
+                    }}
+                    className="flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#eee] bg-white transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-salmon/40"
+                  >
                     <div className="relative aspect-[4/5] overflow-hidden bg-[#f5f5f5]">
                       <Image
                         src={review.image_url || "/images/products/placeholder.jpg"}
@@ -209,6 +217,7 @@ export function CustomersSaying({
                       </div>
                       <Link
                         href={`/product/${review.product_slug}`}
+                        onClick={(e) => e.stopPropagation()}
                         className="mt-2 truncate font-poppins text-[11px] uppercase tracking-wide text-body transition-colors hover:text-salmon"
                       >
                         {review.product_title}
@@ -240,6 +249,11 @@ export function CustomersSaying({
           ) : null}
         </div>
       </div>
+
+      <ReviewDetailModal
+        review={selectedReview}
+        onClose={() => setSelectedReview(null)}
+      />
     </section>
   );
 }
