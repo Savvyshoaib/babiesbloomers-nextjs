@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo } from "react";
 import { topPicks as staticTopPicks } from "@/lib/site-data";
 import { useAppSelector } from "@/store/hooks";
@@ -50,6 +51,15 @@ export function TopPicks() {
               product={product}
             />
           ))}
+        </div>
+
+        <div className="mt-8 flex justify-center sm:mt-10">
+          <Link
+            href="/shop"
+            className="inline-flex h-12 items-center justify-center rounded-[40px] bg-salmon px-8 font-poppins text-[15px] font-semibold text-white transition-colors hover:bg-salmon-soft sm:h-[49px] sm:px-10 sm:text-[16px]"
+          >
+            Explore More
+          </Link>
         </div>
       </div>
     </section>

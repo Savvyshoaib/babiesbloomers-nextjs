@@ -21,7 +21,7 @@ import { useSavedProducts } from "@/lib/saved-products-context";
 import type { ProductReview } from "@/lib/reviews";
 import { ProductReviews } from "./product-reviews";
 
-type Tab = "description" | "additional" | "reviews";
+type Tab = "description" | "additional";
 
 const offerIcons = {
   truck: TruckIcon,
@@ -352,10 +352,6 @@ export function ProductDetail({
             [
               { id: "description", label: "Description" },
               { id: "additional", label: "Additional Information" },
-              {
-                id: "reviews",
-                label: `Reviews (${product.reviewsCount ?? 0})`,
-              },
             ] as const
           ).map((t) => {
             const active = tab === t.id;
@@ -412,15 +408,32 @@ export function ProductDetail({
               </div>
             </dl>
           ) : null}
-          {tab === "reviews" ? (
-            <ProductReviews
-              key={product.slug}
-              productSlug={product.slug}
-              initialReviews={initialReviews}
-            />
-          ) : null}
         </div>
       </div>
+
+      <section
+        className="mt-10 border-t border-[#eee] pt-8 lg:mt-14"
+        aria-labelledby="product-reviews-heading"
+      >
+        <h2
+          id="product-reviews-heading"
+          className="font-fredoka text-[22px] font-medium text-ink sm:text-[26px]"
+        >
+          Reviews
+          {typeof product.reviewsCount === "number" ? (
+            <span className="ml-2 font-poppins text-[15px] font-normal text-body">
+              ({product.reviewsCount})
+            </span>
+          ) : null}
+        </h2>
+        <div className="mt-5">
+          <ProductReviews
+            key={product.slug}
+            productSlug={product.slug}
+            initialReviews={initialReviews}
+          />
+        </div>
+      </section>
     </div>
   );
 }

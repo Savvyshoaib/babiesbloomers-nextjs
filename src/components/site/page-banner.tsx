@@ -47,7 +47,7 @@ export function PageBanner({ title, crumbs }: PageBannerProps) {
                     ) : (
                       <span
                         aria-current={isLast ? "page" : undefined}
-                        className={isLast ? "text-salmon" : undefined}
+                        className={isLast ? "font-medium text-ink" : undefined}
                       >
                         {crumb.label}
                       </span>

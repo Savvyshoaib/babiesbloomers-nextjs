@@ -1,12 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
-import {
-  newArrivals as staticNewArrivals,
-  newArrivalTabs,
-  type NewArrivalTab,
-} from "@/lib/site-data";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useMemo } from "react";
+import { newArrivals as staticNewArrivals } from "@/lib/site-data";
 import { useAppSelector } from "@/store/hooks";
 import {
   selectActiveProducts,
@@ -18,14 +16,21 @@ import { SectionHeading } from "./section-heading";
 
 const HOME_NEW_ARRIVALS_LIMIT = 6;
 
+const sectionLinks = [
+  { label: "Home", href: "/" },
+  { label: "Shop", href: "/shop" },
+  { label: "New Arrivals", href: "/new-arrivals" },
+  { label: "Contact", href: "/contact" },
+] as const;
+
 export function NewArrivals() {
-  const [activeTab, setActiveTab] = useState<NewArrivalTab>("All");
+  const pathname = usePathname();
   const catalogArrivals = useAppSelector(selectNewArrivals);
   const activeProducts = useAppSelector(selectActiveProducts);
   const categories = useAppSelector((s) => s.catalog.categories);
   const { newArrivalsBanner } = useAppSelector(selectSiteContent);
 
-  const source = useMemo(() => {
+  const products = useMemo(() => {
     // Prefer new-arrival tagged products; otherwise latest active products
     // from the newest categories in the catalog.
     let list =
@@ -35,7 +40,6 @@ export function NewArrivals() {
       return staticNewArrivals.slice(0, HOME_NEW_ARRIVALS_LIMIT).map((p) => ({
         ...p,
         slug: undefined as string | undefined,
-        tabs: p.tabs,
       }));
     }
 
@@ -53,7 +57,7 @@ export function NewArrivals() {
       if (inLatest.length > 0) list = inLatest;
     }
 
-    return list.map((p) => ({
+    return list.slice(0, HOME_NEW_ARRIVALS_LIMIT).map((p) => ({
       title: p.title,
       image: p.image,
       oldPrice: p.oldPrice,
@@ -62,22 +66,8 @@ export function NewArrivals() {
       slug: p.slug,
       averageRating: p.averageRating,
       reviewsCount: p.reviewsCount,
-      tabs: [
-        "All",
-        ...p.tabs.filter((t): t is NewArrivalTab =>
-          (newArrivalTabs as readonly string[]).includes(t),
-        ),
-      ] as NewArrivalTab[],
     }));
   }, [catalogArrivals, activeProducts, categories]);
-
-  const products = useMemo(() => {
-    const filtered =
-      activeTab === "All"
-        ? source
-        : source.filter((product) => product.tabs.includes(activeTab));
-    return filtered.slice(0, HOME_NEW_ARRIVALS_LIMIT);
-  }, [source, activeTab]);
 
   return (
     <section
@@ -113,31 +103,31 @@ export function NewArrivals() {
           </div>
 
           <div className="min-w-0">
-            <div
-              role="tablist"
-              aria-label="Filter new arrivals"
+            <nav
+              aria-label="Quick links"
               className="-mx-1 mb-5 flex flex-wrap items-center gap-2 overflow-x-auto px-1 pb-1 sm:mb-[30px] sm:gap-[15px]"
             >
-              {newArrivalTabs.map((tab) => {
-                const isActive = tab === activeTab;
+              {sectionLinks.map((link) => {
+                const isActive =
+                  link.href === "/"
+                    ? pathname === "/"
+                    : pathname === link.href ||
+                      pathname.startsWith(`${link.href}/`);
                 return (
-                  <button
-                    key={tab}
-                    type="button"
-                    role="tab"
-                    aria-selected={isActive}
-                    onClick={() => setActiveTab(tab)}
-                    className={`shrink-0 cursor-pointer rounded-[30px] px-3 py-1.5 font-poppins text-[14px] font-medium leading-6 transition-colors sm:px-[15px] sm:py-[5px] sm:text-[16px] ${
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`shrink-0 rounded-[30px] px-3 py-1.5 font-poppins text-[14px] font-medium leading-6 transition-colors sm:px-[15px] sm:py-[5px] sm:text-[16px] ${
                       isActive
                         ? "bg-salmon-soft text-white"
                         : "text-steel hover:bg-salmon-soft/15"
                     }`}
                   >
-                    {tab}
-                  </button>
+                    {link.label}
+                  </Link>
                 );
               })}
-            </div>
+            </nav>
 
             {products.length > 0 ? (
               <div className="grid grid-cols-2 gap-x-3 gap-y-5 pb-5 sm:gap-x-[30px] sm:gap-y-[20px] sm:grid-cols-3 sm:pb-[20px]">
@@ -150,7 +140,7 @@ export function NewArrivals() {
               </div>
             ) : (
               <p className="py-16 text-center text-[16px] text-body">
-                No products in this category yet. Try another filter.
+                No new arrivals yet. Check back soon.
               </p>
             )}
 
