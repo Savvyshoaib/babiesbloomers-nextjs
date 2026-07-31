@@ -11,6 +11,7 @@ import {
   InstagramIcon,
   LocationIcon,
   MailIcon,
+  PhoneIcon,
   PinterestIcon,
   TwitterIcon,
   WhatsappIcon,
@@ -25,6 +26,9 @@ const socialIcons = {
   youtube: YoutubeIcon,
   whatsapp: WhatsappIcon,
 } as const;
+
+const iconBtnClass =
+  "flex size-10 items-center justify-center rounded-full bg-white text-pink-deep transition-transform hover:-translate-y-0.5";
 
 export function Footer() {
   const { branding, socialLinks } = useAppSelector(selectSiteContent);
@@ -114,13 +118,31 @@ export function Footer() {
                       target="_blank"
                       rel="noreferrer noopener"
                       aria-label={network}
-                      className="flex size-10 items-center justify-center rounded-full bg-white text-pink-deep transition-transform hover:-translate-y-0.5"
+                      className={iconBtnClass}
                     >
                       <Icon className="size-5" />
                     </a>
                   </li>
                 );
               })}
+              <li>
+                <a
+                  href="tel:+923281650622"
+                  aria-label="Call +92 328 1650622"
+                  className={iconBtnClass}
+                >
+                  <PhoneIcon className="size-5" />
+                </a>
+              </li>
+              <li>
+                <a
+                  href="mailto:orders@babiesbloomers.com"
+                  aria-label="Email orders@babiesbloomers.com"
+                  className={iconBtnClass}
+                >
+                  <MailIcon className="size-5" />
+                </a>
+              </li>
             </ul>
           </div>
         </div>
