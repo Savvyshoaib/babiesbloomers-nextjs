@@ -36,8 +36,10 @@ export function CartDrawer() {
     if (!drawerOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    document.body.classList.add("cart-drawer-open");
     return () => {
       document.body.style.overflow = prev;
+      document.body.classList.remove("cart-drawer-open");
     };
   }, [drawerOpen]);
 
@@ -53,7 +55,7 @@ export function CartDrawer() {
 
   return (
     <div
-      className={`fixed inset-0 z-[60] ${drawerOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+      className={`fixed inset-0 z-[120] ${drawerOpen ? "pointer-events-auto" : "pointer-events-none"}`}
       aria-hidden={!drawerOpen}
       {...(!drawerOpen ? { inert: true } : {})}
     >

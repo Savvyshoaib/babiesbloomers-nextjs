@@ -201,8 +201,8 @@ export function ReviewPopupToast() {
             left: 16,
             bottom: 28,
             zIndex: 100,
-            width: 320,
-            maxWidth: "calc(100vw - 2rem)",
+            width: 300,
+            maxWidth: "calc(100vw - 6.5rem)",
             pointerEvents: "none",
           }}
           aria-live="polite"

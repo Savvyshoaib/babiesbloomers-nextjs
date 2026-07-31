@@ -97,6 +97,7 @@ export function AllReviewsModal() {
   const pathname = usePathname();
   const titleId = useId();
   const catalogProducts = useAppSelector((s) => s.catalog.products);
+  const cartDrawerOpen = useAppSelector((s) => s.cart.drawerOpen);
 
   const hidden =
     !pathname ||
@@ -104,6 +105,9 @@ export function AllReviewsModal() {
     pathname.startsWith("/sign-in") ||
     pathname.startsWith("/sign-up") ||
     pathname.startsWith("/checkout");
+
+  const hideFloatingChrome =
+    pathname === "/cart" || pathname.startsWith("/cart/");
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -118,7 +122,7 @@ export function AllReviewsModal() {
   const tabRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    const sync = () => setIsMobile(window.innerWidth < 640);
+    const sync = () => setIsMobile(window.innerWidth < 768);
     sync();
     window.addEventListener("resize", sync);
     return () => window.removeEventListener("resize", sync);
@@ -200,13 +204,20 @@ export function AllReviewsModal() {
 
   if (hidden) return null;
 
+  const hideChrome = open || cartDrawerOpen || hideFloatingChrome;
+  const showSideTab = !hideChrome && !isMobile;
+  const showMobileReviewsFab = !hideChrome && isMobile;
+  const showScrollTop = !hideChrome && showTop;
+  /** Space reserved for third-party WhatsApp float + safe gap */
+  const fabStackBottom = 88;
+
   const overlayStyle: CSSProperties = {
     position: "fixed",
     top: 0,
     right: 0,
     bottom: 0,
     left: 0,
-    zIndex: 100,
+    zIndex: 130,
     display: "flex",
     alignItems: isMobile ? "flex-end" : "center",
     justifyContent: "center",
@@ -228,9 +239,24 @@ export function AllReviewsModal() {
     boxShadow: "0 24px 80px rgba(0,0,0,0.28)",
   };
 
+  const fabBtnStyle: CSSProperties = {
+    display: "flex",
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    border: 0,
+    borderRadius: 9999,
+    background: "#f3aa9b",
+    color: "#fff",
+    boxShadow: "0 6px 20px rgba(243,170,155,0.45)",
+    cursor: "pointer",
+    flexShrink: 0,
+  };
+
   return (
     <>
-      {!open ? (
+      {showSideTab ? (
         <button
           ref={tabRef}
           type="button"
@@ -243,7 +269,7 @@ export function AllReviewsModal() {
             position: "fixed",
             right: 0,
             top: "50%",
-            zIndex: 90,
+            zIndex: 40,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -276,47 +302,63 @@ export function AllReviewsModal() {
         </button>
       ) : null}
 
-      {!open ? (
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          aria-label="Scroll to top"
+      {!hideChrome && (showScrollTop || showMobileReviewsFab) ? (
+        <div
+          className="site-fab-stack"
           style={{
             position: "fixed",
             right: 16,
-            bottom: 20,
-            zIndex: 90,
+            bottom: fabStackBottom,
+            zIndex: 40,
             display: "flex",
-            width: 44,
-            height: 44,
+            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
-            border: 0,
-            borderRadius: 9999,
-            background: "#f3aa9b",
-            color: "#fff",
-            boxShadow: "0 6px 20px rgba(243,170,155,0.45)",
-            cursor: "pointer",
-            opacity: showTop ? 1 : 0,
-            transform: showTop ? "translateY(0)" : "translateY(12px)",
-            pointerEvents: showTop ? "auto" : "none",
-            transition: "opacity 0.2s ease, transform 0.2s ease",
+            gap: 12,
           }}
         >
-          <svg
-            viewBox="0 0 24 24"
-            width={20}
-            height={20}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M12 19V5M5 12l7-7 7 7" />
-          </svg>
-        </button>
+          {showScrollTop ? (
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              aria-label="Scroll to top"
+              style={fabBtnStyle}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width={20}
+                height={20}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 19V5M5 12l7-7 7 7" />
+              </svg>
+            </button>
+          ) : null}
+
+          {showMobileReviewsFab ? (
+            <button
+              ref={tabRef}
+              type="button"
+              onClick={() => {
+                setPage(1);
+                setOpen(true);
+              }}
+              aria-label="Open customer reviews"
+              style={{
+                ...fabBtnStyle,
+                fontFamily: "var(--font-poppins)",
+                fontSize: 18,
+                lineHeight: 1,
+              }}
+            >
+              ★
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {open ? (

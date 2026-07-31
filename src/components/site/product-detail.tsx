@@ -234,67 +234,69 @@ export function ProductDetail({
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <div className="inline-flex h-12 items-center rounded-md border border-[#ddd]">
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex h-12 shrink-0 items-center rounded-md border border-[#ddd]">
+                <button
+                  type="button"
+                  aria-label="Decrease quantity"
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="flex size-12 items-center justify-center text-ink hover:text-salmon"
+                >
+                  <MinusIcon className="size-4" />
+                </button>
+                <span className="min-w-[40px] text-center font-poppins text-[15px] font-medium text-ink">
+                  {qty}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Increase quantity"
+                  onClick={() =>
+                    setQty((q) => Math.min(product.stock || 99, q + 1))
+                  }
+                  className="flex size-12 items-center justify-center text-ink hover:text-salmon"
+                >
+                  <PlusIcon className="size-4" />
+                </button>
+              </div>
+
               <button
                 type="button"
-                aria-label="Decrease quantity"
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
-                className="flex size-12 items-center justify-center text-ink hover:text-salmon"
+                onClick={() => toggleCompare(savedItem)}
+                aria-label="Compare"
+                aria-pressed={compared}
+                title={compared ? "In compare list" : "Add to compare"}
+                className={`flex size-12 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors ${
+                  compared
+                    ? "border-salmon bg-salmon text-white"
+                    : "border-[#ddd] text-ink hover:border-salmon hover:text-salmon"
+                }`}
               >
-                <MinusIcon className="size-4" />
+                <CompareIcon className="size-5" />
               </button>
-              <span className="min-w-[40px] text-center font-poppins text-[15px] font-medium text-ink">
-                {qty}
-              </span>
               <button
                 type="button"
-                aria-label="Increase quantity"
-                onClick={() =>
-                  setQty((q) => Math.min(product.stock || 99, q + 1))
-                }
-                className="flex size-12 items-center justify-center text-ink hover:text-salmon"
+                onClick={() => toggleWishlist(savedItem)}
+                aria-label="Add to wishlist"
+                aria-pressed={wishlisted}
+                title={wishlisted ? "In wishlist" : "Add to wishlist"}
+                className={`flex size-12 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors ${
+                  wishlisted
+                    ? "border-salmon bg-salmon text-white"
+                    : "border-[#ddd] text-ink hover:border-salmon hover:text-salmon"
+                }`}
               >
-                <PlusIcon className="size-4" />
+                <HeartIcon className="size-5" />
               </button>
             </div>
 
             <button
               type="button"
               onClick={handleAddToCart}
-              className="inline-flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-md bg-salmon px-6 font-poppins text-[14px] font-semibold uppercase tracking-wide text-white transition-colors hover:bg-salmon-soft sm:flex-none sm:min-w-[200px]"
+              className="inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-salmon px-6 font-poppins text-[14px] font-semibold uppercase tracking-wide text-white transition-colors hover:bg-salmon-soft sm:w-auto sm:min-w-[200px]"
             >
-              <BagIcon className="size-5" />
+              <BagIcon className="size-5 shrink-0" />
               Add to cart
-            </button>
-
-            <button
-              type="button"
-              onClick={() => toggleCompare(savedItem)}
-              aria-label="Compare"
-              aria-pressed={compared}
-              title={compared ? "In compare list" : "Add to compare"}
-              className={`flex size-12 cursor-pointer items-center justify-center rounded-full border transition-colors ${
-                compared
-                  ? "border-salmon bg-salmon text-white"
-                  : "border-[#ddd] text-ink hover:border-salmon hover:text-salmon"
-              }`}
-            >
-              <CompareIcon className="size-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => toggleWishlist(savedItem)}
-              aria-label="Add to wishlist"
-              aria-pressed={wishlisted}
-              title={wishlisted ? "In wishlist" : "Add to wishlist"}
-              className={`flex size-12 cursor-pointer items-center justify-center rounded-full border transition-colors ${
-                wishlisted
-                  ? "border-salmon bg-salmon text-white"
-                  : "border-[#ddd] text-ink hover:border-salmon hover:text-salmon"
-              }`}
-            >
-              <HeartIcon className="size-5" />
             </button>
           </div>
 

@@ -15,7 +15,6 @@ function PremiumQualityIcon({ className }: { className?: string }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      
       <circle cx="12" cy="8" r="5" />
       <path d="M8.5 12.3 7 21l5-2.6 5 2.6-1.5-8.7" />
     </svg>
@@ -36,21 +35,26 @@ export function TrustBadges() {
   if (HIDDEN_ON_PATHS.has(pathname)) return null;
 
   return (
-    <section className="shell mt-[70px] max-[880px]:mt-[40px]" aria-label="Why shop with us">
-      <div className="grid grid-cols-2 gap-x-4 gap-y-6 border-y border-[#eee] py-8 sm:grid-cols-4 sm:gap-4">
+    <section
+      className="shell mt-[70px] max-[880px]:mt-[40px]"
+      aria-label="Why shop with us"
+    >
+      <div className="grid grid-cols-2 gap-x-3 gap-y-5 overflow-hidden border-y border-[#eee] py-6 sm:grid-cols-4 sm:gap-4 sm:py-8">
         {badges.map(({ icon: Icon, title, desc }) => (
           <div
             key={title}
-            className="flex items-center gap-3 sm:flex-col sm:gap-2.5 sm:text-center"
+            className="flex min-w-0 items-start gap-2.5 sm:flex-col sm:items-center sm:gap-2.5 sm:text-center"
           >
-            <span className="flex size-15 shrink-0 items-center justify-center rounded-full bg-salmon text-ink">
-              <Icon className="size-7" />
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-salmon text-ink sm:size-[60px]">
+              <Icon className="size-5 sm:size-7" />
             </span>
-            <div>
-              <p className="font-poppins text-[14px] font-semibold text-ink">
+            <div className="min-w-0">
+              <p className="font-poppins text-[13px] font-semibold leading-5 text-ink sm:text-[14px]">
                 {title}
               </p>
-              <p className="font-poppins text-[12px] text-body">{desc}</p>
+              <p className="mt-0.5 font-poppins text-[11px] leading-4 text-body sm:text-[12px]">
+                {desc}
+              </p>
             </div>
           </div>
         ))}
