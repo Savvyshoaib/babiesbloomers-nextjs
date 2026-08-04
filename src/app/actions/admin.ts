@@ -948,10 +948,10 @@ export async function upsertProduct(
   const offer3 = String(formData.get("offer3") ?? "").trim();
   const offer4 = String(formData.get("offer4") ?? "").trim();
   const exclusive_offers = [
-    { title: offer1 || "Free shipping orders from $199", icon: "truck" },
+    { title: offer1 || "Free shipping orders from PKR 5,000", icon: "truck" },
     { title: offer2 || "Membership offers 10%, 15%, 20% off", icon: "tag" },
     { title: offer3 || "100% safe for kid", icon: "shield" },
-    { title: offer4 || "Returns within 30 days", icon: "return" },
+    { title: offer4 || "Returns within 7 days", icon: "return" },
   ];
 
   const additional_info = {
@@ -1094,10 +1094,10 @@ export async function seedCatalogFromSiteData(): Promise<ApiResponse> {
     ],
     gallery_images: [p.image],
     exclusive_offers: [
-      { title: "Free shipping orders from $199", icon: "truck" },
+      { title: "Free shipping orders from PKR 5,000", icon: "truck" },
       { title: "Membership offers 10%, 15%, 20% off", icon: "tag" },
       { title: "100% safe for kid", icon: "shield" },
-      { title: "Returns within 30 days", icon: "return" },
+      { title: "Returns within 7 days", icon: "return" },
     ],
     additional_info: {
       material: "Premium cotton blend",

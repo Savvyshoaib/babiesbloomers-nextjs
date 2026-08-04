@@ -54,10 +54,10 @@ export const DEFAULT_SIZES = [
 ];
 
 export const DEFAULT_EXCLUSIVE_OFFERS: CatalogOffer[] = [
-  { title: "Free shipping orders from $199", icon: "truck" },
+  { title: "Free shipping orders from PKR 5,000", icon: "truck" },
   { title: "Membership offers 10%, 15%, 20% off", icon: "tag" },
   { title: "100% safe for kid", icon: "shield" },
-  { title: "Returns within 30 days", icon: "return" },
+  { title: "Returns within 7 days", icon: "return" },
 ];
 
 export function formatPriceLabel(value: number): string {

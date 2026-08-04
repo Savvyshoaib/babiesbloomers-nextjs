@@ -440,10 +440,10 @@ export const productDescriptionBullets = [
 ];
 
 export const productOffers = [
-  { title: "Free shipping orders from $199", icon: "truck" as const },
+  { title: "Free shipping orders from PKR 5,000", icon: "truck" as const },
   { title: "Membership offers 10%, 15%, 20% off", icon: "tag" as const },
   { title: "100% safe for kid", icon: "shield" as const },
-  { title: "Returns within 30 days", icon: "return" as const },
+  { title: "Returns within 7 days", icon: "return" as const },
 ];
 
 export function getShopProduct(slug: string): ShopProduct | undefined {
