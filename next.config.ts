@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
   // Next.js Server Actions payload can exceed default 1MB (e.g. admin content JSON).
   experimental: {
     serverActions: {
-      bodySizeLimit: "2mb",
+      bodySizeLimit: "4mb",
     },
   },
   async headers() {

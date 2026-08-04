@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -10,14 +9,12 @@ import {
   type AdminCategory,
   type AdminProduct,
 } from "@/app/actions/admin";
-import { uploadProductImages } from "@/app/actions/upload";
 import {
   AdminSubmitButton,
   useAdminAction,
 } from "@/components/admin/admin-forms";
-import { ButtonSpinner } from "@/components/site/button-spinner";
+import { ProductImagesField } from "@/components/admin/product-images-field";
 import { DEFAULT_EXCLUSIVE_OFFERS, DEFAULT_SIZES } from "@/lib/catalog-types";
-import { toast } from "sonner";
 
 export function SeedCatalogButton() {
   const { formAction, pending } = useAdminAction(seedCatalogFromSiteData);
@@ -69,51 +66,18 @@ export function ProductForm({
     ? product.exclusive_offers
     : DEFAULT_EXCLUSIVE_OFFERS;
 
-  const [featured, setFeatured] = useState(product?.image ?? "");
-  const [gallery, setGallery] = useState<string[]>(
-    product?.gallery_images?.length
-      ? product.gallery_images
-      : product?.image
-        ? [product.image]
-        : [],
-  );
   const [uploading, setUploading] = useState(false);
+  const initialGallery = product?.gallery_images?.length
+    ? product.gallery_images
+    : product?.image
+      ? [product.image]
+      : [];
 
   useEffect(() => {
     if (state?.success && state.data?.id && !product) {
       router.push(`/admin/products/${state.data.id}`);
     }
   }, [state, product, router]);
-
-  async function onUpload(
-    files: FileList | null,
-    mode: "featured" | "gallery",
-  ) {
-    if (!files?.length) return;
-    setUploading(true);
-    const fd = new FormData();
-    Array.from(files).forEach((f) => fd.append("files", f));
-    const result = await uploadProductImages(fd);
-    setUploading(false);
-
-    if (!result.success || !result.data?.urls?.length) {
-      toast.error(result.message || "Upload failed");
-      return;
-    }
-
-    toast.success(result.message);
-    if (mode === "featured") {
-      setFeatured(result.data.urls[0]!);
-      setGallery((prev) =>
-        prev.includes(result.data!.urls[0]!)
-          ? prev
-          : [result.data!.urls[0]!, ...prev],
-      );
-    } else {
-      setGallery((prev) => [...prev, ...result.data!.urls]);
-      if (!featured) setFeatured(result.data.urls[0]!);
-    }
-  }
 
   const saleValue = product?.price_value ?? "";
   const oldNumeric = product?.old_price
@@ -123,8 +87,6 @@ export function ProductForm({
   return (
     <form action={formAction} className="space-y-8">
       {product ? <input type="hidden" name="id" value={product.id} /> : null}
-      <input type="hidden" name="image" value={featured} />
-      <input type="hidden" name="galleryImages" value={gallery.join("|")} />
 
       <section className="space-y-4">
         <h3 className="font-poppins text-[15px] font-semibold text-ink">
@@ -288,71 +250,11 @@ export function ProductForm({
         <h3 className="font-poppins text-[15px] font-semibold text-ink">
           Images
         </h3>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div>
-            <p className="mb-2 font-poppins text-[13px] font-medium text-ink">
-              Featured image
-            </p>
-            <label className="flex h-40 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#d0c8c0] bg-[#faf9f7] px-4 text-center hover:border-salmon">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={uploading}
-                onChange={(e) => onUpload(e.target.files, "featured")}
-              />
-              {uploading ? (
-                <ButtonSpinner />
-              ) : featured ? (
-                <div className="relative size-28 overflow-hidden rounded-lg">
-                  <Image src={featured} alt="" fill className="object-cover" />
-                </div>
-              ) : (
-                <span className="font-poppins text-[13px] text-body">
-                  Click to upload featured image
-                </span>
-              )}
-            </label>
-          </div>
-          <div>
-            <p className="mb-2 font-poppins text-[13px] font-medium text-ink">
-              Gallery images (multiple)
-            </p>
-            <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[#d0c8c0] bg-[#faf9f7] px-4 py-4 text-center hover:border-salmon">
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                disabled={uploading}
-                onChange={(e) => onUpload(e.target.files, "gallery")}
-              />
-              <span className="font-poppins text-[13px] text-body">
-                Click to upload gallery images from your computer
-              </span>
-              {gallery.length > 0 ? (
-                <ul className="flex flex-wrap justify-center gap-2">
-                  {gallery.map((src) => (
-                    <li key={src} className="relative size-16 overflow-hidden rounded-md">
-                      <Image src={src} alt="" fill className="object-cover" />
-                      <button
-                        type="button"
-                        className="absolute right-0 top-0 bg-red-500 px-1 text-[10px] text-white"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setGallery((prev) => prev.filter((g) => g !== src));
-                          if (featured === src) setFeatured("");
-                        }}
-                      >
-                        ×
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </label>
-          </div>
-        </div>
+        <ProductImagesField
+          initialFeatured={product?.image ?? ""}
+          initialGallery={initialGallery}
+          onUploadingChange={setUploading}
+        />
       </section>
 
       <section className="space-y-4">
